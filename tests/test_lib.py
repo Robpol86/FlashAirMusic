@@ -45,7 +45,7 @@ def test_setup_logging(capsys, tmpdir, log, quiet, verbose):
         else:
             assert 'Test debug.' not in disk
     else:
-        assert not disk
+        assert not tmpdir.listdir()
 
     # Check quiet console.
     if quiet:
