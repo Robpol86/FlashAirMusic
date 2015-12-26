@@ -40,7 +40,7 @@ def setup_logging(config, name=None):
 
     # Handle console logging.
     if not config['--quiet']:
-        formatter = formatter_verbose if config['--verbose'] else logging.Formatter('\xf0\x9f\x92\xac  %(message)s')
+        formatter = formatter_verbose if config['--verbose'] else logging.Formatter('\U0001f4ac  %(message)s')
         handler_stdout = logging.StreamHandler(sys.stdout)
         handler_stdout.setFormatter(formatter)
         handler_stdout.setLevel(logging.DEBUG)

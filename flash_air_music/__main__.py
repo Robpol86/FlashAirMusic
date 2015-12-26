@@ -2,6 +2,9 @@
 
 Command line options override config file values.
 
+TODO:
+* Handle SIGHUP or whatever for re-reading config.
+
 Usage:
     FlashAirMusic [options] run
     FlashAirMusic -h | --help
@@ -53,10 +56,19 @@ def main():
         time.sleep(5)
 
 
+def shutdown(*_):
+    """Cleanup and shut down the program.
+
+    :param _: Ignored.
+    """
+    logging.info('Shutting down.')
+    getattr(os, '_exit')(0)
+
+
 def entry_point():
     """Entry-point from setuptools."""
-    signal.signal(signal.SIGINT, lambda *_: getattr(os, '_exit')(0))  # Properly handle Control+C
-    config = get_arguments(__doc__)
+    signal.signal(signal.SIGINT, shutdown)  # Properly handle Control+C
+    config = get_arguments()
     lib.setup_logging(config)
     try:
         main()
