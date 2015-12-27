@@ -76,7 +76,7 @@ def update_config(signum=-1, argv=None, doc=None):
     :raise flash_air_music.exceptions.ConfigError: Config file read/parse error. Raised only if `doc` arg set.
 
     :param int signum: When called from signal.signal(), this is the signal number.
-    :param list argv: Command line argument list to process. For testing.
+    :param argv: Command line argument list to process. For testing.
     :param str doc: Docstring to pass to docopt.
     """
     # If called from __main__.py on launch.

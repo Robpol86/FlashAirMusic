@@ -83,3 +83,38 @@ def test_update_config_doc(monkeypatch, tmpdir, path):
         assert config['--config'] is None
         assert config['--log'] is None
         assert config['--verbose'] is True
+
+
+@pytest.mark.parametrize('path', [None, 'normal.yaml', 'error.yaml'])
+def test_update_config_hup(monkeypatch, tmpdir, caplog, path):
+    """Test update_config() by calling it with signum defined.
+
+    :param monkeypatch: pytest fixture.
+    :param tmpdir: pytest fixture.
+    :param caplog: pytest extension fixture.
+    :param str path: What to set argv --config to.
+    """
+    config = {'--config': str(tmpdir.join(path)) if path else None, '--log': None, '--verbose': False, '--quiet': False}
+    monkeypatch.setattr('flash_air_music.configuration.GLOBAL_MUTABLE_CONFIG', config)
+
+    # Setup config file.
+    if path == 'normal.yaml':
+        tmpdir.join(path).write('log: sample.log')
+    elif path == 'error.yaml':
+        tmpdir.join(path).write('\x00\x00\x00\x00'.encode(), mode='wb')
+
+    # Call.
+    configuration.update_config(1, object())  # signal.signal() provides signum and frame object.
+
+    # Verify
+    messages = [r.message for r in caplog.records]
+    if path == 'normal.yaml':
+        assert config['--log'] == 'sample.log'
+        assert messages[-1] == 'Done reloading configuration.'
+    elif path == 'error.yaml':
+        assert config['--log'] is None
+        assert messages[-1].startswith('Unable to parse')
+    else:
+        assert config['--log'] is None
+        assert messages[-1] == 'No previously defined configuration file. Nothing to read.'
+    assert [m for m in messages if 'Caught signal' in m]
