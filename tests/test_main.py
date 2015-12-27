@@ -10,10 +10,9 @@ import pytest
 
 
 @pytest.mark.parametrize('error', [False, True])
-def test_subprocess(capsys, tmpdir, error):
+def test_subprocess(tmpdir, error):
     """Test running program through subprocess. Also tests signal handling.
 
-    :param capsys: pytest fixture.
     :param tmpdir: pytest fixture.
     :param bool error: Test startup error handling.
     """

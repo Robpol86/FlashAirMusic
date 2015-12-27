@@ -16,7 +16,7 @@ setup(
     keywords='FlashAir flac music mp3 WiFi',
     license='MIT',
     name='FlashAirMusic',
-    packages=find_packages(exclude='tests'),
+    packages=find_packages(exclude=['tests']),
     url='https://github.com/Robpol86/FlashAirMusic',
     version='0.0.1',
     zip_safe=True,
