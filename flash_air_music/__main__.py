@@ -20,7 +20,6 @@ Options:
 """
 
 import logging
-import os
 import signal
 import sys
 import time
@@ -44,7 +43,7 @@ def shutdown(*_):
     """
     log = logging.getLogger(__name__)
     log.info('Shutting down.')
-    getattr(os, '_exit')(0)
+    sys.exit(0)
 
 
 def entry_point():
