@@ -7,12 +7,12 @@ from io import StringIO
 
 import pytest
 
-from flash_air_music.setup_logging import cleanup_logging, setup_logging
+from flash_air_music import setup_logging
 
 
 @pytest.mark.parametrize('mode', ['', 'rem file', 'bad file', 'dup file', 'rem con', 'bad con', 'dup out', 'dup err'])
 def test_cleanup_logging(monkeypatch, request, tmpdir, mode):
-    """Test cleanup_logging().
+    """Test _cleanup_logging().
 
     :param monkeypatch: pytest fixture.
     :param request: pytest fixture.
@@ -44,7 +44,7 @@ def test_cleanup_logging(monkeypatch, request, tmpdir, mode):
         logger.addHandler(logging.StreamHandler(stderr))
         logger.addHandler(logging.StreamHandler(stderr))
 
-    handlers_file, handlers_out, handlers_err = cleanup_logging(logger, quiet, log)
+    handlers_file, handlers_out, handlers_err = getattr(setup_logging, '_cleanup_logging')(logger, quiet, log)
 
     if mode == 'dup file':
         assert [h.baseFilename for h in handlers_file] == [str(tmpdir.join('sample.log'))]
@@ -77,7 +77,7 @@ def test_setup_logging_new(capsys, request, tmpdir, log, quiet, verbose):
     """
     config = {'--log': str(tmpdir.join(log)) if log else log, '--quiet': quiet, '--verbose': verbose}
     name = '{}_{}'.format(request.function.__name__, '_'.join(k[2:] for k, v in sorted(config.items()) if v))
-    setup_logging(config, name)
+    setup_logging.setup_logging(config, name)
 
     # Emit.
     logger = logging.getLogger(name)
@@ -154,7 +154,7 @@ def test_setup_logging_on_off_on(capsys, request, tmpdir, log):
         assert not logger.handlers
 
     # Log.
-    setup_logging(config, name)
+    setup_logging.setup_logging(config, name)
     logger.info('Test info.')
 
     # Collect.

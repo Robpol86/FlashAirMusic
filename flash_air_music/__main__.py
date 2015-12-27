@@ -1,9 +1,6 @@
 """Sync FLAC music to your car's head unit using a FlashAir WiFi SD card.
 
-Command line options override config file values.
-
-TODO:
-* Handle SIGHUP or whatever for re-reading config.
+Command line options overridden by config file values.
 
 Usage:
     FlashAirMusic [options] run
@@ -11,15 +8,15 @@ Usage:
     FlashAirMusic -V | --version
 
 Options:
-    -c --config         Path YAML config file.
-    -h --help           Show this screen.
-    -l --log            Log to file. Will be rotated daily.
-    -m --mac-addr       FlashAir MAC Address (DHCP sniffing).
-    -q --quiet          Don't print anything to stdout/stderr.
-    -s --music-source   Source directory containing FLAC/MP3s.
-    -v --verbose        Debug logging.
-    -V --version        Show version and exit.
-    -w --working-dir    Working directory for converted music and other files.
+    -c FILE --config=FILE       Path YAML config file.
+    -h --help                   Show this screen.
+    -l FILE --log=FILE          Log to file. Will be rotated daily.
+    -m ADDR --mac-addr=ADDR     FlashAir MAC Address (DHCP sniffing).
+    -q --quiet                  Don't print anything to stdout/stderr.
+    -s DIR --music-source=DIR   Source directory containing FLAC/MP3s.
+    -v --verbose                Debug logging.
+    -V --version                Show version and exit.
+    -w DIR --working-dir=DIR    Working directory for converted music, etc.
 """
 
 import logging
@@ -28,24 +25,7 @@ import signal
 import sys
 import time
 
-import pkg_resources
-from docopt import docopt
-
-from flash_air_music import exceptions, setup_logging
-
-
-def get_arguments(argv=None):
-    """Get command line arguments.
-
-    :param list argv: Command line argument list to process.
-
-    :return: Parsed options.
-    :rtype: dict
-    """
-    require = getattr(pkg_resources, 'require')  # Stupid linting error.
-    project = [p for p in require('FlashAirMusic') if p.project_name == 'FlashAirMusic'][0]
-    version = project.version
-    return docopt(__doc__, argv=argv or sys.argv[1:], version=version)
+from flash_air_music import configuration, exceptions
 
 
 def main():
@@ -61,16 +41,17 @@ def shutdown(*_):
 
     :param _: Ignored.
     """
-    logging.info('Shutting down.')
+    log = logging.getLogger(__name__)
+    log.info('Shutting down.')
     getattr(os, '_exit')(0)
 
 
 def entry_point():
     """Entry-point from setuptools."""
-    signal.signal(signal.SIGINT, shutdown)  # Properly handle Control+C
-    config = get_arguments()
-    setup_logging.setup_logging(config)
+    signal.signal(signal.SIGINT, shutdown)
     try:
+        configuration.update_config(doc=__doc__)
+        signal.signal(signal.SIGHUP, configuration.update_config)
         main()
     except exceptions.BaseError:
         logging.critical('Failure.')

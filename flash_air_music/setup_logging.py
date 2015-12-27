@@ -5,10 +5,8 @@ import logging.handlers
 import os
 import sys
 
-from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
 
-
-class InfoFilter(logging.Filter):
+class _InfoFilter(logging.Filter):
     """Filter out non-info and non-debug logging statements.
 
     From: https://stackoverflow.com/questions/16061641/python-logging-split/16066513#16066513
@@ -25,7 +23,7 @@ class InfoFilter(logging.Filter):
         return record.levelno <= logging.INFO
 
 
-def cleanup_logging(root_logger, quiet, log_file):
+def _cleanup_logging(root_logger, quiet, log_file):
     """Cleanup previous logging configuration. Remove unneeded handlers.
 
     :param root_logger: Root logger to reconfigure.
@@ -61,13 +59,12 @@ def cleanup_logging(root_logger, quiet, log_file):
     return handlers_file, handlers_out, handlers_err
 
 
-def setup_logging(config=None, name=None):
+def setup_logging(config, name=None):
     """Configure or reconfigure console logging. Info and below go to stdout, others go to stderr.
 
-    :param dict config: Configuration dict to read. Used for testing.
+    :param dict config: Configuration dict to read from.
     :param str name: Which logger name to set handlers to. Used for testing.
     """
-    config = config if config is not None else GLOBAL_MUTABLE_CONFIG
     log_file = os.path.realpath(config['--log']) if config['--log'] else ''
     root_logger = logging.getLogger(name)
     root_logger.setLevel(logging.DEBUG if config['--verbose'] else logging.INFO)
@@ -75,7 +72,7 @@ def setup_logging(config=None, name=None):
     formatter_verbose = logging.Formatter('%(asctime)s %(levelname)-8s %(name)-40s %(message)s')
 
     # Cleanup previous config if any.
-    handlers_file, handlers_out = cleanup_logging(root_logger, config['--quiet'], log_file)[:2]
+    handlers_file, handlers_out = _cleanup_logging(root_logger, config['--quiet'], log_file)[:2]
 
     # Handle no logging.
     if config['--quiet'] and not log_file:
@@ -95,7 +92,7 @@ def setup_logging(config=None, name=None):
         handler_stdout = logging.StreamHandler(sys.stdout)
         handler_stdout.setFormatter(formatter)
         handler_stdout.setLevel(logging.DEBUG)
-        handler_stdout.addFilter(InfoFilter())
+        handler_stdout.addFilter(_InfoFilter())
         root_logger.addHandler(handler_stdout)
         handler_stderr = logging.StreamHandler(sys.stderr)
         handler_stderr.setFormatter(formatter)
