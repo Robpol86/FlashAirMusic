@@ -31,7 +31,7 @@ import time
 import pkg_resources
 from docopt import docopt
 
-from flash_air_music import exceptions, lib
+from flash_air_music import exceptions, setup_logging
 
 
 def get_arguments(argv=None):
@@ -69,7 +69,7 @@ def entry_point():
     """Entry-point from setuptools."""
     signal.signal(signal.SIGINT, shutdown)  # Properly handle Control+C
     config = get_arguments()
-    lib.setup_logging(config)
+    setup_logging.setup_logging(config)
     try:
         main()
     except exceptions.BaseError:
