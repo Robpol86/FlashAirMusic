@@ -32,8 +32,9 @@ def main():
     """Main function."""
     log = logging.getLogger(__name__)
     while True:
-        log.info('Doing nothing.')
-        time.sleep(5)
+        log.info('Doing nothing (info).')
+        log.debug('Doing nothing (debug).')
+        time.sleep(0.5)
 
 
 def shutdown(*_):
@@ -49,6 +50,7 @@ def shutdown(*_):
 def entry_point():
     """Entry-point from setuptools."""
     signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
     try:
         configuration.update_config(doc=__doc__)
         signal.signal(signal.SIGHUP, configuration.update_config)
