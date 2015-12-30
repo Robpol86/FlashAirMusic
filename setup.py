@@ -1,9 +1,25 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Setup script for the project."""
 
 from __future__ import print_function
 
+import os
+
 from setuptools import find_packages, setup
+
+
+def readme():
+    """Try to read README.rst or return empty string if failed.
+
+    :return: File contents.
+    :rtype: str
+    """
+    path = os.path.realpath(os.path.join(os.path.dirname(__file__), 'README.rst'))
+    try:
+        with open(path, encoding='utf-8') as handle:
+            return handle.read(131072)
+    except IOError:
+        return ''
 
 
 setup(
@@ -12,9 +28,10 @@ setup(
     classifiers=['Private :: Do Not Upload'],
     description="Sync FLAC music to your car's head unit using a FlashAir WiFi SD card.",
     entry_points={'console_scripts': ['FlashAirMusic = flash_air_music.__main__:entry_point']},
-    install_requires=['docopt==0.6.2', 'PyYAML==3.11', 'requests==2.9.1'],
+    install_requires=['docopt', 'PyYAML', 'requests'],
     keywords='FlashAir flac music mp3 WiFi',
     license='MIT',
+    long_description=readme(),
     name='FlashAirMusic',
     packages=find_packages(exclude=['tests']),
     url='https://github.com/Robpol86/FlashAirMusic',
