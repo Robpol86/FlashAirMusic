@@ -1,18 +1,16 @@
-Name:           %{getenv:NAME}
-Version:        %{getenv:VERSION}
-Release:        1%{?dist}
-Summary:        %{getenv:SUMMARY}
-Group:          Development/Libraries
-
-License:        MIT
-URL:            %{getenv:URL}
-Source0:        %{name}-%{version}.tar.gz
-
 BuildArch:      noarch
 BuildRequires:  python3-devel
+Group:          Development/Libraries
+License:        MIT
+Name:           %{getenv:NAME}
+Release:        1%{?dist}
 Requires:       python3-docopt
 Requires:       python3-PyYAML
 Requires:       python3-requests
+Source0:        %{name}-%{version}.tar.gz
+Summary:        %{getenv:SUMMARY}
+URL:            %{getenv:URL}
+Version:        %{getenv:VERSION}
 
 %description
 =============
@@ -45,9 +43,6 @@ Sync FLAC music to your car's head unit using a FlashAir WiFi SD card.
 
 %install
 %py3_install
-
-%check
-%{__python3} setup.py test
 
 %files
 %license LICENSE

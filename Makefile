@@ -39,18 +39,22 @@ docker-rpmbuild: all
 docker-rpmtest:
 	dnf install -y $(NAME)-$(VERSION)-*.rpm
 	$(NAME) --help
+	test $$(rpm -q $(NAME) --queryformat '%{NAME}') == "$(NAME)"
+	test "$$(rpm -q $(NAME) --queryformat '%{SUMMARY}')" == "$(SUMMARY)"
+	test "$$(rpm -q $(NAME) --queryformat '%{URL}')" == "$(URL)"
+	test $$(rpm -q $(NAME) --queryformat '%{VERSION}') == "$(VERSION)"
 	test $$($(NAME) --version) == "$(VERSION)"
 
 
 .PHONY: docker-build-images
 docker-build-images:
-	docker pull ${MODE}
+	docker pull $(MODE)
 	cat Dockerfile |envsubst > DockerfileParsed
-	docker build -t local/${MODE} -f DockerfileParsed .
+	docker build -t local/$(MODE) -f DockerfileParsed .
 	rm DockerfileParsed
 
 
 .PHONY: docker-run-both
 docker-run-both:
-	docker run -v ${PWD}:/build local/${MODE} make docker-rpmbuild
-	docker run -v ${PWD}:/build:ro -w /build ${MODE} /bin/sh -c "dnf install -y make && make docker-rpmtest"
+	docker run -v ${PWD}:/build local/$(MODE) make docker-rpmbuild
+	docker run -v ${PWD}:/build:ro -w /build $(MODE) /bin/sh -c "dnf install -y make && make docker-rpmtest"
