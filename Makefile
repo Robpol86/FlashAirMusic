@@ -28,3 +28,29 @@ sdist:
 rpm:
 	cp $(NAME).spec $(HOME)/rpmbuild/SPECS/
 	rpmbuild -ba $(NAME).spec
+
+
+.PHONY: docker-rpmbuild
+docker-rpmbuild: all
+	cp -v $(HOME)/rpmbuild/RPMS/*/$(NAME)-$(VERSION)-*.rpm .
+
+
+.PHONY: docker-rpmtest
+docker-rpmtest:
+	dnf install -y $(NAME)-$(VERSION)-*.rpm
+	$(NAME) --help
+	test $$($(NAME) --version) == "$(VERSION)"
+
+
+.PHONY: docker-build-images
+docker-build-images:
+	docker pull ${MODE}
+	cat Dockerfile |envsubst > DockerfileParsed
+	docker build -t local/${MODE} -f DockerfileParsed .
+	rm DockerfileParsed
+
+
+.PHONY: docker-run-both
+docker-run-both:
+	docker run -v ${PWD}:/build local/${MODE} make docker-rpmbuild
+	docker run -v ${PWD}:/build:ro -w /build ${MODE} /bin/sh -c "dnf install -y make && make docker-rpmtest"

@@ -1,12 +1,17 @@
 language: python
 
-sudo: false
+matrix:
+  include:
 
-install:
-  - pip install coveralls tox
+  - env: MODE=tests
+    python: 3.4
+    install: pip install coveralls tox
+    script: tox
+    after_success: coveralls
 
-script:
-  - tox -e lint,py34
+  - env: MODE=fedora:23
+    services: [docker]
+    install: make docker-build-images
+    script: make docker-run-both
 
-after_success:
-  - coveralls
+sudo: required

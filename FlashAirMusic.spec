@@ -2,6 +2,7 @@ Name:           %{getenv:NAME}
 Version:        %{getenv:VERSION}
 Release:        1%{?dist}
 Summary:        %{getenv:SUMMARY}
+Group:          Development/Libraries
 
 License:        MIT
 URL:            %{getenv:URL}
