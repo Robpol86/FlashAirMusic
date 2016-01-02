@@ -49,7 +49,7 @@ Version:        %{getenv:VERSION}
         version, date = unpack(parsed_table)
         year, month, day = date:match('(%d+)-(%d+)-(%d+)')
         date_hr = os.date('%a %b %d %Y', os.time{year=year, month=month, day=day})
-        sections[#sections + 1] = {version, date_hr, section_start, body_start, #changelog, nil}
+        sections[#sections + 1] = {version, date_hr, section_start, body_start, #changelog, ''}
     end
     heading_pattern:gmatch(changelog, callback)
 
@@ -63,13 +63,15 @@ Version:        %{getenv:VERSION}
     -- Next parse each section body.
     for _, section in pairs(sections) do
         body_start, body_end = unpack(section, 4, 5)
-        raw_body = changelog:sub(body_start, body_end):match("^%s*(.-)%s*$")
-        section[6] = '- TODO'
+        raw_body = changelog:sub(body_start - 1, body_end)
+        for k in raw_body:gmatch('(\n[^A-Z\n][^\n]+)') do
+            section[6] = section[6] .. k:gsub('\n    ', '\n'):gsub('\n** ', '\n- ')
+        end
     end
 
     -- Finally print each section.
     for _, section in pairs(sections) do
         version, date, _, _, _, body = unpack(section)
-        print(string.format('* %s Robpol86 <robpol86@gmail.com> - %s-1\n%s\n\n', date, version, body))
+        print(string.format('* %s Robpol86 <robpol86@gmail.com> - %s-1%s\n\n', date, version, body))
     end
 }
