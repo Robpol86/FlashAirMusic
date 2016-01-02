@@ -49,9 +49,9 @@ docker-rpmtest:
 .PHONY: docker-build-images
 docker-build-images:
 	docker pull $(MODE)
-	cat Dockerfile |envsubst > DockerfileParsed
-	docker build -t local/$(MODE) -f DockerfileParsed .
-	rm DockerfileParsed
+	cat DockerfileRPMBuild |envsubst > Dockerfile
+	docker build -t local/$(MODE) .
+	rm Dockerfile
 
 
 .PHONY: docker-run-both

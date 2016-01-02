@@ -7,5 +7,5 @@ VOLUME /build
 WORKDIR /build
 
 ENV NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
-ADD $NAME.spec $NAME.spec
-RUN dnf builddep -y --spec $NAME.spec && rm $NAME.spec
+ADD ["$NAME.spec", "README.rst", "/build/"]
+RUN dnf builddep -y --spec $NAME.spec && rm $NAME.spec README.rst
