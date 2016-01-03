@@ -35,9 +35,9 @@ def _cleanup_logging(root_logger, quiet, log_file):
     """
     # Cleanup previous config.
     for handler in list(root_logger.handlers):
-        if handler.__class__ == logging.handlers.TimedRotatingFileHandler and not log_file:
+        if handler.__class__ == logging.handlers.WatchedFileHandler and not log_file:
             root_logger.removeHandler(handler)
-        elif handler.__class__ == logging.handlers.TimedRotatingFileHandler and handler.baseFilename != log_file:
+        elif handler.__class__ == logging.handlers.WatchedFileHandler and handler.baseFilename != log_file:
             root_logger.removeHandler(handler)
         elif handler.__class__ == logging.StreamHandler and quiet:
             root_logger.removeHandler(handler)
@@ -45,14 +45,14 @@ def _cleanup_logging(root_logger, quiet, log_file):
             root_logger.removeHandler(handler)
 
     # Cleanup duplicate handlers.
-    handlers_file = [h for h in root_logger.handlers if h.__class__ == logging.handlers.TimedRotatingFileHandler]
+    handlers_file = [h for h in root_logger.handlers if h.__class__ == logging.handlers.WatchedFileHandler]
     handlers_out = [h for h in root_logger.handlers if h.__class__ == logging.StreamHandler and h.stream == sys.stdout]
     handlers_err = [h for h in root_logger.handlers if h.__class__ == logging.StreamHandler and h.stream == sys.stderr]
     for handler in handlers_file[1:] + handlers_out[1:] + handlers_err[1:]:
         root_logger.removeHandler(handler)
 
     # Get remaining handlers.
-    handlers_file = [h for h in root_logger.handlers if h.__class__ == logging.handlers.TimedRotatingFileHandler]
+    handlers_file = [h for h in root_logger.handlers if h.__class__ == logging.handlers.WatchedFileHandler]
     handlers_out = [h for h in root_logger.handlers if h.__class__ == logging.StreamHandler and h.stream == sys.stdout]
     handlers_err = [h for h in root_logger.handlers if h.__class__ == logging.StreamHandler and h.stream == sys.stderr]
 
@@ -69,7 +69,7 @@ def setup_logging(config, name=None):
     root_logger = logging.getLogger(name)
     root_logger.setLevel(logging.DEBUG if config['--verbose'] else logging.INFO)
     formatter_minimal = logging.Formatter('\U0001f4ac  %(message)s')
-    formatter_verbose = logging.Formatter('%(asctime)s %(levelname)-8s %(name)-40s %(message)s')
+    formatter_verbose = logging.Formatter('%(asctime)s %(process)-5d %(levelname)-8s %(name)-40s %(message)s')
 
     # Cleanup previous config if any.
     handlers_file, handlers_out = _cleanup_logging(root_logger, config['--quiet'], log_file)[:2]
@@ -82,7 +82,7 @@ def setup_logging(config, name=None):
 
     # Handle file logging.
     if log_file and not handlers_file:
-        handler = logging.handlers.TimedRotatingFileHandler(log_file, 'd', 1, 60)
+        handler = logging.handlers.WatchedFileHandler(log_file)
         handler.setFormatter(formatter_verbose)
         root_logger.addHandler(handler)
 

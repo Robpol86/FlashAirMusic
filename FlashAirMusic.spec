@@ -36,9 +36,13 @@ Version:            %{getenv:VERSION}
 
 %install
 %py3_install
-install -d -m 0755 %{buildroot}/%{_sysconfdir}/%{name} %{buildroot}/%{_unitdir}
-install -m 0644 %{name}.yaml %{buildroot}/%{_sysconfdir}/%{name}/
-install -m 0644 %{name}.service %{buildroot}/%{_unitdir}/
+%{__install} -d -m 0755 %{buildroot}%{_localstatedir}/log/%{name}
+%{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/%{name}
+%{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/logrotate.d
+%{__install} -d -m 0755 %{buildroot}%{_unitdir}
+%{__install} -m 0644 %{name}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
+%{__install} -m 0644 %{name}.service %{buildroot}%{_unitdir}/
+%{__install} -m 0644 %{name}.yaml %{buildroot}%{_sysconfdir}/%{name}/
 
 %pre
 getent group %{daemon_group} >/dev/null || groupadd -r %{daemon_group}
@@ -56,7 +60,9 @@ exit 0
 %systemd_postun_with_restart %{name}.service
 
 %files
-%config(noreplace) %attr(0644, root, %{daemon_group}) %{_sysconfdir}/%{name}/%{name}.yaml
+%config(noreplace) %attr(-, root, %{daemon_group}) %{_sysconfdir}/%{name}/%{name}.yaml
+%config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
+%dir %attr(-, %{daemon_user}, %{daemon_group}) %{_localstatedir}/log/%{name}
 %doc README.rst
 %license LICENSE
 %{_unitdir}/%{name}.service

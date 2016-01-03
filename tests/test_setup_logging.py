@@ -25,13 +25,13 @@ def test_cleanup_logging(monkeypatch, request, tmpdir, mode):
     log, name, quiet = str(tmpdir.join('sample.log')), request.function.__name__, False
     logger = logging.getLogger(name)
     if mode == 'rem file':
-        logger.addHandler(logging.handlers.TimedRotatingFileHandler(log))
+        logger.addHandler(logging.handlers.WatchedFileHandler(log))
         log = ''
     elif mode == 'bad file':
-        logger.addHandler(logging.handlers.TimedRotatingFileHandler(str(tmpdir.join('bad.log'))))
+        logger.addHandler(logging.handlers.WatchedFileHandler(str(tmpdir.join('bad.log'))))
     elif mode == 'dup file':
-        logger.addHandler(logging.handlers.TimedRotatingFileHandler(log))
-        logger.addHandler(logging.handlers.TimedRotatingFileHandler(log))
+        logger.addHandler(logging.handlers.WatchedFileHandler(log))
+        logger.addHandler(logging.handlers.WatchedFileHandler(log))
     elif mode == 'rem con':
         logger.addHandler(logging.StreamHandler(stdout))
         quiet = True

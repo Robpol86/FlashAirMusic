@@ -1,0 +1,7 @@
+/var/log/FlashAirMusic/*.log {
+    compress
+    missingok
+    monthly
+    notifempty
+    rotate 4
+}
