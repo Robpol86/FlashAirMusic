@@ -1,5 +1,5 @@
 export NAME = $(shell ./setup.py --name)
-export SUMMARY = $(shell ./setup.py --description)
+export SUMMARY = $(shell ./setup.py --description |sed 's/\.$$//')
 export URL = $(shell ./setup.py --url)
 export VERSION = $(shell ./setup.py --version)
 
@@ -38,6 +38,7 @@ docker-rpmbuild: all
 .PHONY: docker-rpmtest
 docker-rpmtest:
 	dnf install -y $(NAME)-$(VERSION)-*.rpm
+	rpmlint $(NAME)
 	$(NAME) --help
 	test $$(rpm -q $(NAME) --queryformat '%{NAME}') == "$(NAME)"
 	test "$$(rpm -q $(NAME) --queryformat '%{SUMMARY}')" == "$(SUMMARY)"
@@ -57,4 +58,4 @@ docker-build-images:
 .PHONY: docker-run-both
 docker-run-both:
 	docker run -v ${PWD}:/build local/$(MODE) make docker-rpmbuild
-	docker run -v ${PWD}:/build:ro -w /build $(MODE) /bin/sh -c "dnf install -y make && make docker-rpmtest"
+	docker run -v ${PWD}:/build:ro -w /build $(MODE) /bin/sh -c "dnf install -y make rpmlint && make docker-rpmtest"

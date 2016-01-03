@@ -1,0 +1,4 @@
+# Sample configuration file for the FlashAirMusic service.
+mac-addr: 00:00:00:00:00:00
+music-source: ~/music_source
+working-dir: ~/working_dir

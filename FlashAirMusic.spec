@@ -4,6 +4,7 @@ Group:          Development/Libraries
 License:        MIT
 Name:           %{getenv:NAME}
 Release:        1%{?dist}
+Requires(pre):  shadow-utils
 Requires:       python3-docopt
 Requires:       python3-PyYAML
 Requires:       python3-requests
@@ -11,6 +12,9 @@ Source0:        %{name}-%{version}.tar.gz
 Summary:        %{getenv:SUMMARY}
 URL:            %{getenv:URL}
 Version:        %{getenv:VERSION}
+
+%global daemon_group %{lua: print(rpm.expand('%{name}'):gsub('([^\n])(%u)', '%1_%2'):lower()) }
+%global daemon_user %{daemon_group}
 
 %description
 %{lua:
@@ -28,10 +32,19 @@ Version:        %{getenv:VERSION}
 
 %install
 %py3_install
+install -d -m 0755 %{buildroot}/%{_sysconfdir}/%{name}
+install -m 0644 %{name}.yaml %{buildroot}/%{_sysconfdir}/%{name}/%{name}.yaml
+
+%pre
+getent group %{daemon_group} >/dev/null || groupadd -r %{daemon_group}
+getent passwd %{daemon_user} >/dev/null || \
+    useradd -r -g %{daemon_group} -s /sbin/nologin -c "%{name} service account" %{daemon_user}
+exit 0
 
 %files
-%license LICENSE
+%config(noreplace) %attr(0644, root, %{daemon_group}) %{_sysconfdir}/%{name}/%{name}.yaml
 %doc README.rst
+%license LICENSE
 %{python3_sitelib}/*
 %{_bindir}/%{name}
 
