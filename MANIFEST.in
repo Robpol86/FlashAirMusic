@@ -1,2 +1,3 @@
+include FlashAirMusic.service
 include FlashAirMusic.yaml
 include LICENSE

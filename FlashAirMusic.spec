@@ -1,17 +1,21 @@
-BuildArch:      noarch
-BuildRequires:  python3-devel
-Group:          Development/Libraries
-License:        MIT
-Name:           %{getenv:NAME}
-Release:        1%{?dist}
-Requires(pre):  shadow-utils
-Requires:       python3-docopt
-Requires:       python3-PyYAML
-Requires:       python3-requests
-Source0:        %{name}-%{version}.tar.gz
-Summary:        %{getenv:SUMMARY}
-URL:            %{getenv:URL}
-Version:        %{getenv:VERSION}
+BuildArch:          noarch
+BuildRequires:      python3-devel
+BuildRequires:      systemd
+Group:              Development/Libraries
+License:            MIT
+Name:               %{getenv:NAME}
+Release:            1%{?dist}
+Requires(post):     systemd
+Requires(postun):   systemd
+Requires(pre):      shadow-utils
+Requires(preun):    systemd
+Requires:           python3-docopt
+Requires:           python3-PyYAML
+Requires:           python3-requests
+Source0:            %{name}-%{version}.tar.gz
+Summary:            %{getenv:SUMMARY}
+URL:                %{getenv:URL}
+Version:            %{getenv:VERSION}
 
 %global daemon_group %{lua: print(rpm.expand('%{name}'):gsub('([^\n])(%u)', '%1_%2'):lower()) }
 %global daemon_user %{daemon_group}
@@ -32,8 +36,9 @@ Version:        %{getenv:VERSION}
 
 %install
 %py3_install
-install -d -m 0755 %{buildroot}/%{_sysconfdir}/%{name}
-install -m 0644 %{name}.yaml %{buildroot}/%{_sysconfdir}/%{name}/%{name}.yaml
+install -d -m 0755 %{buildroot}/%{_sysconfdir}/%{name} %{buildroot}/%{_unitdir}
+install -m 0644 %{name}.yaml %{buildroot}/%{_sysconfdir}/%{name}/
+install -m 0644 %{name}.service %{buildroot}/%{_unitdir}/
 
 %pre
 getent group %{daemon_group} >/dev/null || groupadd -r %{daemon_group}
@@ -41,10 +46,20 @@ getent passwd %{daemon_user} >/dev/null || \
     useradd -r -g %{daemon_group} -s /sbin/nologin -c "%{name} service account" %{daemon_user}
 exit 0
 
+%post
+%systemd_post %{name}.service
+
+%preun
+%systemd_preun %{name}.service
+
+%postun
+%systemd_postun_with_restart %{name}.service
+
 %files
 %config(noreplace) %attr(0644, root, %{daemon_group}) %{_sysconfdir}/%{name}/%{name}.yaml
 %doc README.rst
 %license LICENSE
+%{_unitdir}/%{name}.service
 %{python3_sitelib}/*
 %{_bindir}/%{name}
 

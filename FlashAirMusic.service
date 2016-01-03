@@ -1,0 +1,18 @@
+[Unit]
+Description=Sync FLAC music to your car's head unit using a FlashAir WiFi SD card.
+Documentation=file:///usr/share/doc/FlashAirMusic/README.rst
+After=network.target
+
+[Service]
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/bin/FlashAirMusic run -c /etc/FlashAirMusic/FlashAirMusic.yaml
+Group=flash_air_music
+StandardError=syslog
+StandardOutput=syslog
+StartLimitBurst=3
+StartLimitInterval=60s
+Type=simple
+User=flash_air_music
+
+[Install]
+WantedBy=multi-user.target
