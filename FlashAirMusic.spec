@@ -10,6 +10,7 @@ Requires(postun):   systemd
 Requires(pre):      shadow-utils
 Requires(preun):    systemd
 Requires:           python3-docopt
+Requires:           python3-mutagen
 Requires:           python3-PyYAML
 Requires:           python3-requests
 Source0:            %{name}-%{version}.tar.gz

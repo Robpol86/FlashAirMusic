@@ -28,7 +28,7 @@ setup(
     classifiers=['Private :: Do Not Upload'],
     description="Sync FLAC music to your car's head unit using a FlashAir WiFi SD card.",
     entry_points={'console_scripts': ['FlashAirMusic = flash_air_music.__main__:entry_point']},
-    install_requires=['docopt', 'PyYAML', 'requests'],
+    install_requires=['docopt', 'mutagen', 'PyYAML', 'requests'],
     keywords='FlashAir flac music mp3 WiFi',
     license='MIT',
     long_description=readme(),
