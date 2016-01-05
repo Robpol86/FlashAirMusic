@@ -169,3 +169,31 @@ def test_setup_logging_on_off_on(capsys, request, tmpdir, log):
     else:
         assert 'Test info.' in stdout
         assert 'Test info.' in disk
+
+
+def test_logrotate(request, tmpdir):
+    """Test logrotate support.
+
+    :param request: pytest fixture.
+    :param tmpdir: pytest fixture.
+    """
+    # Setup.
+    config = {'--log': str(tmpdir.join('sample.log')), '--quiet': True, '--verbose': False}
+    name = request.function.__name__
+    logger = logging.getLogger(name)
+
+    # Log.
+    setup_logging.setup_logging(config, name)
+    logger.info('Test one.')
+    tmpdir.join('sample.log').move(tmpdir.join('sample.log.old'))
+    logger.info('Test two.')
+
+    # Collect.
+    sample_one = tmpdir.join('sample.log.old').read()
+    sample_two = tmpdir.join('sample.log').read()
+
+    # Check.
+    assert 'Test one.' in sample_one
+    assert 'Test two.' not in sample_one
+    assert 'Test one.' not in sample_two
+    assert 'Test two.' in sample_two
