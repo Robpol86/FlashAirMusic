@@ -1,6 +1,8 @@
 """Handles reading configuration from command line or file and storing it in a global mutable dictionary."""
 
 import logging
+import os
+import re
 import signal
 import sys
 
@@ -12,7 +14,11 @@ from yaml.reader import ReaderError
 from flash_air_music.exceptions import ConfigError
 from flash_air_music.setup_logging import setup_logging
 
+DEFAULT_WORKING_DIR = os.path.join(os.environ['HOME'], 'FlashAirMusicWorkingDir')
+SIGNALS_INT_TO_NAME = {v: {a for a, b in vars(signal).items() if a.startswith('SIG') and b == v}
+                       for k, v in vars(signal).items() if k.startswith('SIG')}
 GLOBAL_MUTABLE_CONFIG = dict()
+REGEX_MAC_ADDR = re.compile(r'^(?:[a-fA-F0-9]{2}[ :-]?){5}[a-fA-F0-9]{2}$')
 
 
 def _get_arguments(doc, argv=None):
@@ -67,46 +73,90 @@ def _read_config_file(path):
     return config
 
 
-def update_config(signum=-1, argv=None, doc=None):
-    """Read config data from command line and/or config file.
+def _validate_config(config, file_config=None):
+    """Validate config data.
 
-    Called two different ways. Either in __main__.entry_point() which handles ConfigError or from signal.signal() which
-    expects this function to handle ConfigError.
+    :raise flash_air_music.exceptions.ConfigError: On invalid data.
 
-    :raise flash_air_music.exceptions.ConfigError: Config file read/parse error. Raised only if `doc` arg set.
-
-    :param int signum: When called from signal.signal(), this is the signal number.
-    :param argv: Command line argument list to process. For testing.
-    :param str doc: Docstring to pass to docopt.
+    :param dict config: Configuration dict to validate.
+    :param dict file_config: Second configuration dict, usually from a config file.
     """
-    # If called from __main__.py on launch.
-    if doc:
-        GLOBAL_MUTABLE_CONFIG.update(_get_arguments(doc, argv))
-        setup_logging(GLOBAL_MUTABLE_CONFIG)
-        if GLOBAL_MUTABLE_CONFIG['--config']:
-            file_config = _read_config_file(GLOBAL_MUTABLE_CONFIG['--config'])
-            if file_config:
-                GLOBAL_MUTABLE_CONFIG.update(file_config)
-                setup_logging(GLOBAL_MUTABLE_CONFIG)
-        log = logging.getLogger(__name__)
-        log.debug('Read config file. Updated GLOBAL_MUTABLE_CONFIG.')
-        return
+    if file_config:
+        config = config.copy()
+        config.update(file_config)
+    if config['--log']:
+        parent = os.path.dirname(config['--log']) or os.getcwd()
+        if not os.path.isdir(parent):
+            logging.getLogger(__name__).error('Log file parent directory %s not a directory.', parent)
+            raise ConfigError
+        if not os.access(parent, os.W_OK | os.X_OK):
+            logging.getLogger(__name__).error('Log file parent directory %s not writable.', parent)
+            raise ConfigError
+        if os.path.exists(config['--log']) and not os.access(config['--log'], os.R_OK | os.W_OK):
+            logging.getLogger(__name__).error('Log file %s not read/writable.', config['--log'])
+            raise ConfigError
+    if not config['--music-source']:
+        logging.getLogger(__name__).error('Music source directory not specified.')
+        raise ConfigError
+    if not os.path.isdir(config['--music-source']):
+        logging.getLogger(__name__).error('Music source directory does not exist: %s', config['--music-source'])
+        raise ConfigError
+    if not os.access(config['--music-source'], os.R_OK | os.X_OK):
+        logging.getLogger(__name__).error('No access to music source directory: %s', config['--music-source'])
+        raise ConfigError
+    if not os.path.isdir(config['--working-dir']):
+        logging.getLogger(__name__).error('Working directory does not exist: %s', config['--working-dir'])
+        raise ConfigError
+    if not os.access(config['--working-dir'], os.R_OK | os.W_OK | os.X_OK):
+        logging.getLogger(__name__).error('No access to working directory: %s', config['--working-dir'])
+        raise ConfigError
+    if config['--mac-addr'] and not REGEX_MAC_ADDR.match(config['--mac-addr']):
+        logging.getLogger(__name__).error('Invalid MAC address: %s', config['--mac-addr'])
+        raise ConfigError
 
-    # Handle signaling.
-    int_to_name = {getattr(signal, k): list() for k in dir(signal) if k.startswith('SIG')}
-    for name in (k for k in dir(signal) if k.startswith('SIG')):
-        int_to_name[getattr(signal, name)].append(name)
+
+def initialize_config(doc, argv=None):
+    """Called during initial startup. Read config data from command line and optionally a config file.
+
+    :param str doc: Docstring to pass to docopt.
+    :param argv: Command line argument list to process. For testing.
+    """
+    GLOBAL_MUTABLE_CONFIG.update(_get_arguments(doc, argv))
+    if not GLOBAL_MUTABLE_CONFIG['--working-dir']:
+        GLOBAL_MUTABLE_CONFIG['--working-dir'] = DEFAULT_WORKING_DIR
+    if GLOBAL_MUTABLE_CONFIG['--config']:
+        file_config = _read_config_file(GLOBAL_MUTABLE_CONFIG['--config'])
+        if file_config:
+            GLOBAL_MUTABLE_CONFIG.update(file_config)
+    _validate_config(GLOBAL_MUTABLE_CONFIG)
+    setup_logging(GLOBAL_MUTABLE_CONFIG)
     log = logging.getLogger(__name__)
-    log.info('Caught signal %d (%s). Reloading configuration.', signum, ', '.join(int_to_name[signum]))
+    log.debug('Read config file. Updated GLOBAL_MUTABLE_CONFIG.')
+
+
+def update_config(signum, _):
+    """Read config data from config file on SIGHUP (1).
+
+    :param int signum: Signal number provided by signal.signal().
+    :param _: Ignored frame.
+    """
+    log = logging.getLogger(__name__)
+    log.info('Caught signal %d (%s). Reloading configuration.', signum, '/'.join(SIGNALS_INT_TO_NAME[signum]))
     if not GLOBAL_MUTABLE_CONFIG['--config']:
         log.warning('No previously defined configuration file. Nothing to read.')
         return
 
-    # Read config.
+    # Read config. Validate before merging into global config.
     try:
         file_config = _read_config_file(GLOBAL_MUTABLE_CONFIG['--config'])
+        if file_config:
+            _validate_config(GLOBAL_MUTABLE_CONFIG, file_config)
+        else:
+            log.warning('Config file %s empty.', GLOBAL_MUTABLE_CONFIG['--config'])
+            return
     except ConfigError:
         return
     GLOBAL_MUTABLE_CONFIG.update(file_config)
     setup_logging(GLOBAL_MUTABLE_CONFIG)
+
     log.info('Done reloading configuration.')

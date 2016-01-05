@@ -51,7 +51,7 @@ def entry_point():
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
     try:
-        configuration.update_config(doc=__doc__)
+        configuration.initialize_config(doc=__doc__)
         signal.signal(signal.SIGHUP, configuration.update_config)
         main()
     except exceptions.BaseError:

@@ -16,7 +16,10 @@ def test_subprocess(tmpdir, error):
     :param tmpdir: pytest fixture.
     :param bool error: Test startup error handling.
     """
-    tmpdir.join('config.yaml').write('bad' if error else 'verbose: True')
+    if error:
+        tmpdir.join('config.yaml').write('bad')
+    else:
+        tmpdir.join('config.yaml').write('verbose: True\nmusic-source: {0}\nworking-dir: {0}'.format(str(tmpdir)))
     script = find_executable('FlashAirMusic')
     command = [script, 'run', '--config', str(tmpdir.join('config.yaml'))]
     assert os.path.isfile(script)
