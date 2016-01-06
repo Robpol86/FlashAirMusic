@@ -142,7 +142,7 @@ def test_validate_config_music_source(monkeypatch, tmpdir, caplog, mode):
         assert messages[-1].startswith('No access to music source directory')
 
 
-@pytest.mark.parametrize('mode', ['specified', 'default', 'dne', 'perm'])
+@pytest.mark.parametrize('mode', ['specified', 'default', 'dne', 'perm', 'collision'])
 def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     """Test _validate_config() --working-dir validation via initialize_config().
 
@@ -155,9 +155,13 @@ def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir)]
-    if mode != 'default':
-        argv.extend(['--working-dir', str(tmpdir.join('not_default'))])
+    argv = ['run']
+    if mode == 'collision':
+        argv.extend(['--music-source', str(tmpdir.join(configuration.CONVERTED_MUSIC_SUBDIR).ensure_dir())])
+    else:
+        argv.extend(['--music-source', str(tmpdir)])
+        if mode != 'default':
+            argv.extend(['--working-dir', str(tmpdir.join('not_default'))])
 
     if mode != 'dne':
         tmpdir.join('not_default').ensure_dir()
@@ -174,8 +178,10 @@ def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     messages = [r.message for r in caplog.records]
     if mode == 'dne':
         assert messages[-1].startswith('Working directory does not exist')
-    else:
+    elif mode == 'perm':
         assert messages[-1].startswith('No access to working directory')
+    else:
+        assert messages[-1] == 'Music source dir cannot match working directory converted music subdir.'
 
 
 @pytest.mark.parametrize('mode', ['missing', 'contiguous', 'hyphens', 'colons', 'spaces', 'bad'])

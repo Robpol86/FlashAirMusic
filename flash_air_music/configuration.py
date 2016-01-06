@@ -14,6 +14,7 @@ from yaml.reader import ReaderError
 from flash_air_music.exceptions import ConfigError
 from flash_air_music.setup_logging import setup_logging
 
+CONVERTED_MUSIC_SUBDIR = 'converted_music'
 DEFAULT_WORKING_DIR = os.path.join(os.environ['HOME'], 'FlashAirMusicWorkingDir')
 SIGNALS_INT_TO_NAME = {v: {a for a, b in vars(signal).items() if a.startswith('SIG') and b == v}
                        for k, v in vars(signal).items() if k.startswith('SIG')}
@@ -109,6 +110,10 @@ def _validate_config(config, file_config=None):
         raise ConfigError
     if not os.access(config['--working-dir'], os.R_OK | os.W_OK | os.X_OK):
         logging.getLogger(__name__).error('No access to working directory: %s', config['--working-dir'])
+        raise ConfigError
+    if os.path.realpath(os.path.join(config['--working-dir'],
+                                     CONVERTED_MUSIC_SUBDIR)) == os.path.realpath(config['--music-source']):
+        logging.getLogger(__name__).error('Music source dir cannot match working directory converted music subdir.')
         raise ConfigError
     if config['--mac-addr'] and not REGEX_MAC_ADDR.match(config['--mac-addr']):
         logging.getLogger(__name__).error('Invalid MAC address: %s', config['--mac-addr'])
