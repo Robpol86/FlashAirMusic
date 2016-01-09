@@ -7,6 +7,10 @@ import pytest
 from mutagen.id3 import COMM, ID3
 
 from flash_air_music.convert import id3_flac_tags
+from flash_air_music.convert.discover import Song
+from flash_air_music.exceptions import CorruptedTargetFile
+
+HERE = py.path.local(__file__).dirpath()
 
 
 @pytest.mark.parametrize('mode', ['dne', 'empty', 'corrupted', 'no comment', 'bad comment', 'partial', 'good'])
@@ -25,7 +29,7 @@ def test_read_stored_metadata(tmpdir, caplog, mode):
     elif mode == 'corrupted':
         path.write('\x00\x00\x00\x00')
     elif mode != 'dne':
-        py.path.local(__file__).dirpath().join('1khz_sine.mp3').copy(path)
+        HERE.join('1khz_sine.mp3').copy(path)
 
     # Write ID3 tag.
     text, expected = '', dict()
@@ -57,3 +61,30 @@ def test_read_stored_metadata(tmpdir, caplog, mode):
         assert messages[-1].startswith('Comment tag not JSON in mp3 file')
     else:
         assert messages[-1].startswith('Comment tag JSON has missing/invalid data mp3 file')
+
+
+def test_write_stored_metadata(tmpdir, caplog):
+    """Test write_stored_metadata().
+
+    :param tmpdir: pytest fixture.
+    :param caplog: pytest extension fixture.
+    """
+    source_file = tmpdir.join('source').ensure_dir().join('song.mp3').ensure()
+    target_file = tmpdir.join('target').ensure_dir().join('song.mp3').ensure()
+    song = Song(str(source_file), source_file.dirname, target_file.dirname)
+
+    # Test empty file.
+    with pytest.raises(CorruptedTargetFile):
+        id3_flac_tags.write_stored_metadata(song)
+    messages = [r.message for r in caplog.records]
+    assert messages[-1].startswith('Corrupted mp3 file')
+
+    # Run.
+    HERE.join('1khz_sine.mp3').copy(source_file)
+    HERE.join('1khz_sine.mp3').copy(target_file)
+    assert song.needs_conversion is True
+    id3_flac_tags.write_stored_metadata(song)
+
+    # Verify.
+    song = Song(str(source_file), source_file.dirname, target_file.dirname)
+    assert song.needs_conversion is False

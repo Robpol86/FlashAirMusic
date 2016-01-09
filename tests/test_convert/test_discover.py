@@ -95,6 +95,49 @@ def test_get_songs(tmpdir):
     assert sorted(valid_targets) == [str(target_dir.join('song1.mp3')), str(target_dir.join('song2.mp3'))]
 
 
+def test_get_songs_subdirectories(tmpdir):
+    """Test get_songs() with nested subdirectories.
+
+    :param tmpdir: pytest fixture.
+    """
+    # Setup directory structure.
+    source_dir = tmpdir.join('source').ensure_dir()
+    source_dir_a = source_dir.join('a').ensure_dir()
+    source_dir_b = source_dir.join('b').ensure_dir()
+    source_dir_c = source_dir.join('b', 'c').ensure_dir()
+    source_dir_d = source_dir.join('b', 'c', 'd').ensure_dir()
+    target_dir = tmpdir.join('target').ensure_dir()
+
+    # Copy files.
+    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine.mp3').copy(source_dir_a.join('song2.mp3'))
+    HERE.join('1khz_sine.mp3').copy(source_dir_b.join('song3.mp3'))
+    HERE.join('1khz_sine.mp3').copy(source_dir_c.join('song4.mp3'))
+    HERE.join('1khz_sine.mp3').copy(source_dir_d.join('song5.mp3'))
+
+    # Test those files.
+    songs, valid_targets = discover.get_songs(str(source_dir), str(target_dir))
+    assert len(songs) == 5
+    assert len(valid_targets) == 5
+    expected = {
+        str(source_dir.join('song1.mp3')),
+        str(source_dir_a.join('song2.mp3')),
+        str(source_dir_b.join('song3.mp3')),
+        str(source_dir_c.join('song4.mp3')),
+        str(source_dir_d.join('song5.mp3')),
+    }
+    assert {s.source for s in songs} == expected
+    expected = {
+        str(target_dir.join('song1.mp3')),
+        str(target_dir.join('a', 'song2.mp3')),
+        str(target_dir.join('b', 'song3.mp3')),
+        str(target_dir.join('b', 'c', 'song4.mp3')),
+        str(target_dir.join('b', 'c', 'd', 'song5.mp3')),
+    }
+    assert {s.target for s in songs} == expected
+    assert sorted(valid_targets) == sorted(expected)
+
+
 def test_files_dirs_to_delete(tmpdir):
     """Test files_dirs_to_delete() function.
 
