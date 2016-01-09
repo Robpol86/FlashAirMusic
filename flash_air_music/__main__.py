@@ -9,6 +9,7 @@ Usage:
 
 Options:
     -c FILE --config=FILE       Path YAML config file.
+    -f FILE --ffmpeg-bin=FILE   File path to ffmpeg binary.
     -h --help                   Show this screen.
     -l FILE --log=FILE          Log to file. Will be rotated daily.
     -m ADDR --mac-addr=ADDR     FlashAir MAC Address (DHCP sniffing).

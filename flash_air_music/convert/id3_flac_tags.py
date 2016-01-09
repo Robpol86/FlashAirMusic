@@ -18,7 +18,7 @@ def read_stored_metadata(path):
     """
     log = logging.getLogger(__name__)
 
-    # Read id3 tags.
+    # Open file.
     try:
         id3_tags = ID3(path)
     except FileNotFoundError:

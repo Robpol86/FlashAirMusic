@@ -16,6 +16,8 @@ def test_read_config_file(monkeypatch, tmpdir, caplog, bad):
     :param str bad: Scenario to test for.
     """
     config = dict()
+    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg.chmod(0o0755)
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
 
@@ -30,13 +32,20 @@ def test_read_config_file(monkeypatch, tmpdir, caplog, bad):
     if bad == 'text':
         path.write('text')
     if not bad:
-        path.write('working-dir: {0}\nmusic-source: {0}\nverbose: false\nignore_me: null'.format(str(tmpdir)))
+        path.write("""\
+            ffmpeg-bin: {1}
+            ignore_me: null
+            music-source: {0}
+            verbose: false
+            working-dir: {0}
+        """.format(str(tmpdir), str(ffmpeg)))
     argv = ['run', '--config', str(path)]
 
     if not bad:
         configuration.initialize_config(doc=doc, argv=argv)
         expected = {
             '--config': str(path),
+            '--ffmpeg-bin': str(tmpdir.join('ffmpeg')),
             '--help': False,
             '--log': None,
             '--mac-addr': None,
@@ -70,6 +79,9 @@ def test_validate_config_log(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
+    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg.chmod(0o0755)
+    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
@@ -114,6 +126,9 @@ def test_validate_config_music_source(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
+    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg.chmod(0o0755)
+    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
@@ -152,6 +167,9 @@ def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
+    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg.chmod(0o0755)
+    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
@@ -194,6 +212,9 @@ def test_validate_config_mac_addr(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
+    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg.chmod(0o0755)
+    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
@@ -223,6 +244,45 @@ def test_validate_config_mac_addr(monkeypatch, tmpdir, caplog, mode):
     assert messages[-1] == 'Invalid MAC address: Invalid'
 
 
+@pytest.mark.parametrize('mode', ['specified', 'default', 'default missing', 'dne', 'perm'])
+def test_validate_config_ffmpeg_bin(monkeypatch, tmpdir, caplog, mode):
+    """Test _validate_config() --ffmpeg-bin validation via initialize_config().
+
+    :param monkeypatch: pytest fixture.
+    :param tmpdir: pytest fixture.
+    :param caplog: pytest extension fixture.
+    :param str mode: Scenario to test for.
+    """
+    config = dict()
+    ffmpeg = tmpdir.join('ffmpeg')
+    if mode != 'dne':
+        ffmpeg.ensure()
+        if mode != 'perm':
+            ffmpeg.chmod(0o0755)
+    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg) if mode != 'default missing' else None)
+    monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
+    monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
+    monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
+    argv = ['run', '--music-source', str(tmpdir)]
+    if mode == 'specified':
+        argv.extend(['--ffmpeg-bin', str(ffmpeg)])
+
+    if mode in ('specified', 'default'):
+        configuration.initialize_config(doc=doc, argv=argv)
+        assert config['--ffmpeg-bin'] == str(ffmpeg)
+        return
+
+    with pytest.raises(exceptions.ConfigError):
+        configuration.initialize_config(doc=doc, argv=argv)
+    messages = [r.message for r in caplog.records]
+    if mode == 'dne':
+        assert messages[-1].startswith('ffmpeg binary does not exist')
+    elif mode == 'perm':
+        assert messages[-1].startswith('No access to ffmpeg')
+    else:
+        assert messages[-1] == 'Unable to find ffmpeg in PATH.'
+
+
 @pytest.mark.parametrize('mode', ['good', 'no_config', 'corrupted', 'bad_config', 'empty_config'])
 def test_update_config(monkeypatch, tmpdir, caplog, mode):
     """Test update_config() and SIGHUP handling.
@@ -233,6 +293,9 @@ def test_update_config(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
+    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg.chmod(0o0755)
+    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)

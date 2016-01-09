@@ -10,9 +10,10 @@ import pytest
 
 
 @pytest.mark.parametrize('error', [False, True])
-def test_subprocess(tmpdir, error):
+def test_subprocess(monkeypatch, tmpdir, error):
     """Test running program through subprocess. Also tests signal handling.
 
+    :param monkeypatch: pytest fixture.
     :param tmpdir: pytest fixture.
     :param bool error: Test startup error handling.
     """
@@ -23,6 +24,10 @@ def test_subprocess(tmpdir, error):
     script = find_executable('FlashAirMusic')
     command = [script, 'run', '--config', str(tmpdir.join('config.yaml'))]
     assert os.path.isfile(script)
+
+    ffmpeg = tmpdir.join('bin').ensure_dir().join('ffmpeg').ensure()
+    ffmpeg.chmod(0o0755)
+    monkeypatch.setenv('PATH', '{}:{}'.format(os.environ['PATH'], ffmpeg.dirname))
 
     if error:
         with pytest.raises(subprocess.CalledProcessError) as exc:

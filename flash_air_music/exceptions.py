@@ -11,3 +11,9 @@ class ConfigError(BaseError):
     """Error while reading configuration data."""
 
     pass
+
+
+class CorruptedTargetFile(BaseError):
+    """Error while operating on convered target file."""
+
+    pass

@@ -9,6 +9,7 @@ Requires(post):     systemd
 Requires(postun):   systemd
 Requires(pre):      shadow-utils
 Requires(preun):    systemd
+Requires:           ffmpeg
 Requires:           python3-docopt
 Requires:           python3-mutagen
 Requires:           python3-PyYAML

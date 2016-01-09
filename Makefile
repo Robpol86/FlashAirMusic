@@ -49,7 +49,7 @@ docker-rpmtest:
 
 .PHONY: docker-build-images
 docker-build-images:
-	docker pull $(MODE)
+	docker pull robpol86/rpmfusion-$(MODE)
 	cat DockerfileRPMBuild |envsubst > Dockerfile
 	docker build -t local/$(MODE) .
 	rm Dockerfile
@@ -58,4 +58,4 @@ docker-build-images:
 .PHONY: docker-run-both
 docker-run-both:
 	docker run -v ${PWD}:/build local/$(MODE) make docker-rpmbuild
-	docker run -v ${PWD}:/build:ro -w /build $(MODE) /bin/sh -c "dnf install -y make rpmlint && make docker-rpmtest"
+	docker run -v ${PWD}:/build:ro -w /build robpol86/rpmfusion-$(MODE) make docker-rpmtest

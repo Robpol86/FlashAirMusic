@@ -5,6 +5,7 @@ import os
 import re
 import signal
 import sys
+from distutils.spawn import find_executable
 
 import pkg_resources
 from docopt import docopt
@@ -15,6 +16,7 @@ from flash_air_music.exceptions import ConfigError
 from flash_air_music.setup_logging import setup_logging
 
 CONVERTED_MUSIC_SUBDIR = 'converted_music'
+DEFAULT_FFMPEG_BINARY = find_executable('ffmpeg')
 DEFAULT_WORKING_DIR = os.path.join(os.environ['HOME'], 'FlashAirMusicWorkingDir')
 SIGNALS_INT_TO_NAME = {v: {a for a, b in vars(signal).items() if a.startswith('SIG') and b == v}
                        for k, v in vars(signal).items() if k.startswith('SIG')}
@@ -63,7 +65,7 @@ def _read_config_file(path):
 
     # Parse config.
     config = dict()
-    for key in ('--log', '--mac-addr', '--music-source', '--working-dir'):
+    for key in ('--log', '--mac-addr', '--music-source', '--working-dir', '--ffmpeg-bin'):
         if key[2:] in data:
             value = data[key[2:]]
             config[key] = str(value) if value is not None else None
@@ -74,7 +76,7 @@ def _read_config_file(path):
     return config
 
 
-def _validate_config(config, file_config=None):
+def _validate_config(config, file_config=None):  # pylint:disable=too-many-branches
     """Validate config data.
 
     :raise flash_air_music.exceptions.ConfigError: On invalid data.
@@ -118,6 +120,15 @@ def _validate_config(config, file_config=None):
     if config['--mac-addr'] and not REGEX_MAC_ADDR.match(config['--mac-addr']):
         logging.getLogger(__name__).error('Invalid MAC address: %s', config['--mac-addr'])
         raise ConfigError
+    if not config['--ffmpeg-bin']:
+        logging.getLogger(__name__).error('Unable to find ffmpeg in PATH.')
+        raise ConfigError
+    if not os.path.isfile(config['--ffmpeg-bin']):
+        logging.getLogger(__name__).error('ffmpeg binary does not exist: %s', config['--ffmpeg-bin'])
+        raise ConfigError
+    if not os.access(config['--ffmpeg-bin'], os.R_OK | os.X_OK):
+        logging.getLogger(__name__).error('No access to ffmpeg: %s', config['--ffmpeg-bin'])
+        raise ConfigError
 
 
 def initialize_config(doc, argv=None):
@@ -127,6 +138,8 @@ def initialize_config(doc, argv=None):
     :param argv: Command line argument list to process. For testing.
     """
     GLOBAL_MUTABLE_CONFIG.update(_get_arguments(doc, argv))
+    if not GLOBAL_MUTABLE_CONFIG['--ffmpeg-bin']:
+        GLOBAL_MUTABLE_CONFIG['--ffmpeg-bin'] = DEFAULT_FFMPEG_BINARY
     if not GLOBAL_MUTABLE_CONFIG['--working-dir']:
         GLOBAL_MUTABLE_CONFIG['--working-dir'] = DEFAULT_WORKING_DIR
     if GLOBAL_MUTABLE_CONFIG['--config']:
