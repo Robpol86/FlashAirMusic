@@ -15,7 +15,8 @@ class Song(object):
 
     :ivar str source: Source file path (usually FLAC file).
     :ivar str target: Target file path (mp3 file).
-    :ivar dict stored_metadata: Previously recorded metadata of source and target files stored in target file ID3 tag.
+    :ivar dict previous_metadata: Previously recorded metadata of source and target files stored in target file ID3 tag.
+    :ivar dict current_metadata: Current metadata of soruce and target files.
     """
 
     def __init__(self, source, source_dir, target_dir):
