@@ -51,6 +51,7 @@ def test_read_config_file(monkeypatch, tmpdir, caplog, bad):
             '--mac-addr': None,
             '--music-source': str(tmpdir),
             '--quiet': False,
+            '--threads': '0',
             '--verbose': False,
             '--version': False,
             '--working-dir': str(tmpdir),
@@ -242,6 +243,37 @@ def test_validate_config_mac_addr(monkeypatch, tmpdir, caplog, mode):
         configuration.initialize_config(doc=doc, argv=argv)
     messages = [r.message for r in caplog.records]
     assert messages[-1] == 'Invalid MAC address: Invalid'
+
+
+@pytest.mark.parametrize('mode', ['default', '0', '1', '10', '5.5', 'a'])
+def test_validate_config_threads(monkeypatch, tmpdir, caplog, mode):
+    """Test _validate_config() --threads validation via initialize_config().
+
+    :param monkeypatch: pytest fixture.
+    :param tmpdir: pytest fixture.
+    :param caplog: pytest extension fixture.
+    :param str mode: Scenario to test for.
+    """
+    config = dict()
+    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg.chmod(0o0755)
+    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
+    monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
+    monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
+    monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
+    argv = ['run', '--music-source', str(tmpdir)]
+    if mode != 'default':
+        argv.extend(['--threads', mode])
+
+    if mode not in ('a', '5.5'):
+        configuration.initialize_config(doc=doc, argv=argv)
+        assert config['--threads'] == '0' if mode == 'default' else mode
+        return
+
+    with pytest.raises(exceptions.ConfigError):
+        configuration.initialize_config(doc=doc, argv=argv)
+    messages = [r.message for r in caplog.records]
+    assert messages[-1] == 'Thread count must be a number: {}'.format(mode)
 
 
 @pytest.mark.parametrize('mode', ['specified', 'default', 'default missing', 'dne', 'perm'])

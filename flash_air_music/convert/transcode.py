@@ -16,9 +16,9 @@ TIMEOUT = 5 * 60  # Seconds.
 class Protocol(asyncio.SubprocessProtocol):
     """Handles process output."""
 
-    def __init__(self, exit_future):
+    def __init__(self, loop):
         """Constructor."""
-        self.exit_future = exit_future
+        self.exit_future = asyncio.Future(loop=loop)
         self.stdout = bytearray()
         self.stderr = bytearray()
 
@@ -64,20 +64,19 @@ def convert_file(loop, song):
 
     # Start process.
     log.info('Converting %s', os.path.basename(song.source))
-    exit_future = asyncio.Future(loop=loop)
-    transport, protocol = yield from loop.subprocess_exec(lambda: Protocol(exit_future), *command, stdin=None)
+    transport, protocol = yield from loop.subprocess_exec(lambda: Protocol(loop), *command, stdin=None)
     pid = transport.get_pid()
 
     # Wait for process to finish.
     log.debug('Process %d started with command %s with timeout %d.', pid, str(command), TIMEOUT)
-    while not exit_future.done():
+    while not protocol.exit_future.done():
         log.debug('Process %d still running...', pid)
         if time.time() - start_time > TIMEOUT and timeout_signals:
             send_signal = timeout_signals.pop()
             log.warning('Timeout exceeded, sending signal %d to pid %d.', send_signal, pid)
             transport.send_signal(send_signal)
-        yield from asyncio.sleep(SLEEP_FOR)
-    yield from exit_future
+        yield from asyncio.sleep(SLEEP_FOR, loop=loop)
+    yield from protocol.exit_future
 
     # Get results.
     transport.close()

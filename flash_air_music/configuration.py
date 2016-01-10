@@ -65,7 +65,7 @@ def _read_config_file(path):
 
     # Parse config.
     config = dict()
-    for key in ('--log', '--mac-addr', '--music-source', '--working-dir', '--ffmpeg-bin'):
+    for key in ('--log', '--mac-addr', '--music-source', '--working-dir', '--ffmpeg-bin', '--threads'):
         if key[2:] in data:
             value = data[key[2:]]
             config[key] = str(value) if value is not None else None
@@ -87,6 +87,8 @@ def _validate_config(config, file_config=None):  # pylint:disable=too-many-branc
     if file_config:
         config = config.copy()
         config.update(file_config)
+
+    # --log
     if config['--log']:
         parent = os.path.dirname(config['--log']) or os.getcwd()
         if not os.path.isdir(parent):
@@ -98,6 +100,8 @@ def _validate_config(config, file_config=None):  # pylint:disable=too-many-branc
         if os.path.exists(config['--log']) and not os.access(config['--log'], os.R_OK | os.W_OK):
             logging.getLogger(__name__).error('Log file %s not read/writable.', config['--log'])
             raise ConfigError
+
+    # --music-source
     if not config['--music-source']:
         logging.getLogger(__name__).error('Music source directory not specified.')
         raise ConfigError
@@ -107,6 +111,8 @@ def _validate_config(config, file_config=None):  # pylint:disable=too-many-branc
     if not os.access(config['--music-source'], os.R_OK | os.X_OK):
         logging.getLogger(__name__).error('No access to music source directory: %s', config['--music-source'])
         raise ConfigError
+
+    # --working-dir
     if not os.path.isdir(config['--working-dir']):
         logging.getLogger(__name__).error('Working directory does not exist: %s', config['--working-dir'])
         raise ConfigError
@@ -117,9 +123,13 @@ def _validate_config(config, file_config=None):  # pylint:disable=too-many-branc
                                      CONVERTED_MUSIC_SUBDIR)) == os.path.realpath(config['--music-source']):
         logging.getLogger(__name__).error('Music source dir cannot match working directory converted music subdir.')
         raise ConfigError
+
+    # --mac-addr
     if config['--mac-addr'] and not REGEX_MAC_ADDR.match(config['--mac-addr']):
         logging.getLogger(__name__).error('Invalid MAC address: %s', config['--mac-addr'])
         raise ConfigError
+
+    # --ffmpeg-bin
     if not config['--ffmpeg-bin']:
         logging.getLogger(__name__).error('Unable to find ffmpeg in PATH.')
         raise ConfigError
@@ -128,6 +138,13 @@ def _validate_config(config, file_config=None):  # pylint:disable=too-many-branc
         raise ConfigError
     if not os.access(config['--ffmpeg-bin'], os.R_OK | os.X_OK):
         logging.getLogger(__name__).error('No access to ffmpeg: %s', config['--ffmpeg-bin'])
+        raise ConfigError
+
+    # --threads
+    try:
+        int(config['--threads'])
+    except (TypeError, ValueError):
+        logging.getLogger(__name__).error('Thread count must be a number: %s', config['--threads'])
         raise ConfigError
 
 
