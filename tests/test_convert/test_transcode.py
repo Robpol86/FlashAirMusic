@@ -86,3 +86,50 @@ def test_convert_file_deadlock(monkeypatch, tmpdir, caplog):
     assert messages[-3].endswith('test_stdout10240')
     assert messages[-2].endswith('test_stderr10240')
     assert messages[-1] == 'Storing metadata in song1.mp3'
+
+
+@pytest.mark.parametrize('exit_signal', ['SIGINT', 'SIGTERM', 'SIGKILL'])
+def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
+    """Test convert_file() with a stalled process.
+
+    :param monkeypatch: pytest fixture.
+    :param tmpdir: pytest fixture.
+    :param caplog: pytest extension fixture.
+    :param str exit_signal: Script exits on this signal.
+    """
+    ffmpeg = tmpdir.join('ffmpeg')
+    ffmpeg.write(dedent("""\
+    #!/bin/bash
+    trap "echo Ignoring signal." SIGINT SIGTERM
+    [ -n "$EXIT_SIGNAL" ] && trap "{ echo Catching $EXIT_SIGNAL; exit 2; }" $EXIT_SIGNAL
+    for i in {1..10}; do echo $i; sleep 0.1; done
+    exit 1
+    """))
+    ffmpeg.chmod(0o0755)
+    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg)})
+    monkeypatch.setattr(transcode, 'SLEEP_FOR', 0.1)
+    monkeypatch.setattr(transcode, 'TIMEOUT', 0.5)
+    monkeypatch.setenv('EXIT_SIGNAL', exit_signal)
+    source_dir = tmpdir.join('source').ensure_dir()
+    target_dir = tmpdir.join('target').ensure_dir()
+    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
+    song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
+
+    # Run.
+    loop = asyncio.get_event_loop()
+    exit_status = loop.run_until_complete(transcode.convert_file(loop, song))[-1]
+
+    # Verify.
+    messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
+    assert exit_status == 2 if exit_signal != 'SIGKILL' else -1
+    assert messages[0] == 'Converting song1.mp3'
+    assert messages[2].endswith('still running...')
+    assert messages[-3].endswith('exited {}'.format(exit_status))
+
+    # Verify based on exit_signal.
+    sent_signals = [m for m in messages if m.startswith('Timeout exceeded')]
+    assert sent_signals[0].startswith('Timeout exceeded, sending signal 2')
+    if exit_signal in ('SIGTERM', 'SIGKILL'):
+        assert sent_signals[1].startswith('Timeout exceeded, sending signal 15')
+    if exit_signal == 'SIGKILL':
+        assert sent_signals[2].startswith('Timeout exceeded, sending signal 9')
