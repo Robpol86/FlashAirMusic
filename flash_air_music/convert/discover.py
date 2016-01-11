@@ -32,6 +32,19 @@ class Song(object):
         self.current_metadata = dict()
         self.refresh_current_metadata()
 
+    def __repr__(self):
+        """repr() handler."""
+        return '<{}.{} name={} needs_conversion={}>'.format(
+            self.__class__.__module__,
+            self.__class__.__name__,
+            self.name, self.needs_conversion,
+        )
+
+    @property
+    def name(self):
+        """Return basename of source file."""
+        return os.path.basename(self.source)
+
     @property
     def needs_conversion(self):
         """Skip file if nothing has changed."""

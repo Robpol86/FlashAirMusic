@@ -63,7 +63,7 @@ def convert_file(loop, song):
     ]
 
     # Start process.
-    log.info('Converting %s', os.path.basename(song.source))
+    log.info('Converting %s', song.name)
     transport, protocol = yield from loop.subprocess_exec(lambda: Protocol(loop), *command, stdin=None)
     pid = transport.get_pid()
 
@@ -89,7 +89,7 @@ def convert_file(loop, song):
 
     # Cleanup or finalize.
     if exit_status:
-        log.error('Failed to convert %s! ffmpeg exited %d.', os.path.basename(song.source), exit_status)
+        log.error('Failed to convert %s! ffmpeg exited %d.', song.name, exit_status)
         log.error('Error output of %s: %s', str(command), stderr.decode('utf-8'))
         if os.path.isfile(song.target):
             log.error('Removing %s', song.target)
@@ -99,3 +99,51 @@ def convert_file(loop, song):
         write_stored_metadata(song)
 
     return song, command, exit_status
+
+
+@asyncio.coroutine
+def run(semaphore, loop, song):
+    """Wait for semaphore before running convert_file().
+
+    :param asyncio.Semaphore semaphore: Semaphore() instance.
+    :param loop: AsyncIO event loop object.
+    :param flash_air_music.convert.discover.Song song: Song instance.
+
+    :return: convert_file() return value.
+    :rtype: tuple
+    """
+    log = logging.getLogger(__name__)
+    log.debug('%s: waiting for semaphore...', song.name)
+    try:
+        with (yield from semaphore):
+            log.debug('%s: got semaphore lock.', song.name)
+            return (yield from convert_file(loop, song))
+    finally:
+        log.debug('%s: released lock.', song.name)
+
+
+@asyncio.coroutine
+def convert_songs(loop, songs):
+    """Convert all songs concurrently.
+
+    :param loop: AsyncIO event loop object.
+    :param iter songs: List of Song instances.
+    """
+    log = logging.getLogger(__name__)
+    workers = int(GLOBAL_MUTABLE_CONFIG['--threads']) or os.cpu_count()
+    conversion_semaphore = asyncio.Semaphore(workers)
+
+    # Execute all.
+    log.info('Beginning to convert %d file(s) up to %d at a time.', len(songs), workers)
+    nested_results = yield from asyncio.wait([run(conversion_semaphore, loop, s) for s in songs])
+    results = [t for s in nested_results for t in s]
+    succeeded = [t for t in (r.result() for r in results if not r.exception()) if t[-1] == 0]
+    log.info('Done converting %d file(s) (%d failed).', len(results), len(results) - len(succeeded))
+
+    # Look for exceptions.
+    for future in (r for r in results if r.exception()):
+        # noinspection PyBroadException
+        try:
+            future.result()
+        except Exception:  # pylint: disable=broad-except
+            log.exception('BUG! Exception raised in coroutine.')
