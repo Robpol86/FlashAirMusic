@@ -87,7 +87,14 @@ def convert_file(loop, song):
     log.debug('Process %d stdout: %s', pid, stdout.decode('utf-8'))
     log.debug('Process %d stderr: %s', pid, stderr.decode('utf-8'))
 
-    if not exit_status:
+    # Cleanup or finalize.
+    if exit_status:
+        log.error('Failed to convert %s! ffmpeg exited %d.', os.path.basename(song.source), exit_status)
+        log.error('Error output of %s: %s', str(command), stderr.decode('utf-8'))
+        if os.path.isfile(song.target):
+            log.error('Removing %s', song.target)
+            os.remove(song.target)
+    else:
         log.debug('Storing metadata in %s', os.path.basename(song.target))
         write_stored_metadata(song)
 

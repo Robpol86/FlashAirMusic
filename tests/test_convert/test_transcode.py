@@ -1,6 +1,7 @@
 """Test functions in module."""
 
 import asyncio
+import re
 from textwrap import dedent
 
 import py
@@ -40,10 +41,60 @@ def test_convert_file_success(monkeypatch, tmpdir, caplog):
 
     # Verify log.
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
-    assert messages[0] == 'Converting song1.mp3'
-    assert str(command) in messages[1]
-    assert messages[-4].endswith('exited 0')
-    assert messages[-1] == 'Storing metadata in song1.mp3'
+    command_str = str(command)
+    assert 'Converting song1.mp3' in messages
+    assert 'Storing metadata in song1.mp3' in messages
+    assert any(command_str in m for m in messages)
+    assert any(re.match(r'^Process \d+ exited 0$', m) for m in messages)
+
+
+@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.parametrize('delete', [False, True])
+def test_convert_file_failure(monkeypatch, tmpdir, caplog, delete):
+    """Test convert_file() with errors.
+
+    :param monkeypatch: pytest fixture.
+    :param tmpdir: pytest fixture.
+    :param caplog: pytest extension fixture.
+    :param bool delete: Test removing bad target file.
+    """
+    ffmpeg = tmpdir.join('ffmpeg')
+    ffmpeg.write(dedent("""\
+    #!/bin/bash
+    exit 1
+    """))
+    ffmpeg.chmod(0o0755)
+    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg)})
+    monkeypatch.setattr(transcode, 'SLEEP_FOR', 0.1)
+    source_dir = tmpdir.join('source').ensure_dir()
+    target_dir = tmpdir.join('target').ensure_dir()
+    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
+    if delete:
+        HERE.join('1khz_sine.mp3').copy(target_dir.join('song1.mp3'))
+    song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
+    assert song.needs_conversion is True
+
+    # Run.
+    loop = asyncio.get_event_loop()
+    command, exit_status = loop.run_until_complete(transcode.convert_file(loop, song))[1:]
+
+    # Verify.
+    assert exit_status == 1
+    assert not target_dir.join('song1.mp3').check(file=True)
+    assert Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir)).needs_conversion is True
+
+    # Verify log.
+    messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
+    command_str = str(command)
+    assert 'Converting song1.mp3' in messages
+    assert 'Storing metadata in song1.mp3' not in messages
+    assert 'Failed to convert song1.mp3! ffmpeg exited 1.' in messages
+    assert any(command_str in m for m in messages)
+    assert any(re.match(r'^Process \d+ exited 1$', m) for m in messages)
+    if delete:
+        assert 'Removing {}'.format(str(target_dir.join('song1.mp3'))) in messages
+    else:
+        assert 'Removing {}'.format(str(target_dir.join('song1.mp3'))) not in messages
 
 
 @pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
@@ -79,13 +130,14 @@ def test_convert_file_deadlock(monkeypatch, tmpdir, caplog):
 
     # Verify log.
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
-    assert messages[0] == 'Converting song1.mp3'
-    assert str(command) in messages[1]
-    assert messages[2].endswith('still running...')
-    assert messages[-4].endswith('exited 0')
-    assert messages[-3].endswith('test_stdout10240')
-    assert messages[-2].endswith('test_stderr10240')
-    assert messages[-1] == 'Storing metadata in song1.mp3'
+    command_str = str(command)
+    assert 'Converting song1.mp3' in messages
+    assert 'Storing metadata in song1.mp3' in messages
+    assert any(command_str in m for m in messages)
+    assert any(re.match(r'^Process \d+ exited 0$', m) for m in messages)
+    assert any(re.match(r'^Process \d+ still running\.\.\.$', m) for m in messages)
+    assert any(m.endswith('test_stdout10240') for m in messages)
+    assert any(m.endswith('test_stderr10240') for m in messages)
 
 
 @pytest.mark.parametrize('exit_signal', ['SIGINT', 'SIGTERM', 'SIGKILL'])
@@ -122,9 +174,10 @@ def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
     # Verify.
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
     assert exit_status == 2 if exit_signal != 'SIGKILL' else -1
-    assert messages[0] == 'Converting song1.mp3'
-    assert messages[2].endswith('still running...')
-    assert messages[-3].endswith('exited {}'.format(exit_status))
+    assert 'Converting song1.mp3' in messages
+    assert 'Storing metadata in song1.mp3' not in messages
+    assert any(re.match(r'^Process \d+ exited {}$'.format(exit_status), m) for m in messages)
+    assert any(re.match(r'^Process \d+ still running\.\.\.$', m) for m in messages)
 
     # Verify based on exit_signal.
     sent_signals = [m for m in messages if m.startswith('Timeout exceeded')]
