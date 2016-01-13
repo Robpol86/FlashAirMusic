@@ -48,6 +48,14 @@ def test_song(tmpdir, mode):
     assert song.source == str(source_file)
     assert song.target == str(target_file)
     assert song.needs_conversion is (False if mode == 'up to date' else True)
+    assert repr(song) == '<Song name=song.mp3 changed=False needs_conversion={}>'.format(str(song.needs_conversion))
+    assert song.changed is False
+
+    # Test changed.
+    ID3(str(source_file)).save(padding=lambda _: 200)
+    assert song.changed is True
+    song.refresh_current_metadata()
+    assert song.changed is False
 
 
 def test_get_songs(tmpdir):

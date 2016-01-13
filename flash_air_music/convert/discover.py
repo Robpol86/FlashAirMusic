@@ -16,7 +16,7 @@ class Song(object):
     :ivar str source: Source file path (usually FLAC file).
     :ivar str target: Target file path (mp3 file).
     :ivar dict previous_metadata: Previously recorded metadata of source and target files stored in target file ID3 tag.
-    :ivar dict current_metadata: Current metadata of soruce and target files.
+    :ivar dict current_metadata: Current metadata of source and target files.
     """
 
     def __init__(self, source, source_dir, target_dir):
@@ -34,11 +34,18 @@ class Song(object):
 
     def __repr__(self):
         """repr() handler."""
-        return '<{}.{} name={} needs_conversion={}>'.format(
-            self.__class__.__module__,
+        return '<{} name={} changed={} needs_conversion={}>'.format(
             self.__class__.__name__,
-            self.name, self.needs_conversion,
+            self.name, self.changed, self.needs_conversion,
         )
+
+    @property
+    def changed(self):
+        """Return True if the file changed since we last checked."""
+        source_stat = os.stat(self.source)
+        mtime = int(source_stat.st_mtime)
+        size = int(source_stat.st_size)
+        return self.current_metadata['source_mtime'] != mtime or self.current_metadata['source_size'] != size
 
     @property
     def name(self):
