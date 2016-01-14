@@ -153,7 +153,8 @@ def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
     ffmpeg = tmpdir.join('ffmpeg')
     ffmpeg.write(dedent("""\
     #!/bin/bash
-    trap "echo Ignoring signal." SIGINT SIGTERM
+    trap "echo Ignoring SIGINT." SIGINT
+    trap "echo Ignoring SIGTERM." SIGTERM
     [ -n "$EXIT_SIGNAL" ] && trap "{ echo Catching $EXIT_SIGNAL; exit 2; }" $EXIT_SIGNAL
     for i in {1..10}; do echo $i; sleep 0.1; done
     exit 1
