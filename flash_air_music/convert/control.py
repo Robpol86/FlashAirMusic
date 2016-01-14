@@ -6,6 +6,7 @@ import os
 
 from flash_air_music.configuration import CONVERTED_MUSIC_SUBDIR, GLOBAL_MUTABLE_CONFIG
 from flash_air_music.convert.discover import files_dirs_to_delete, get_songs
+from flash_air_music.convert.transcode import convert_songs
 
 CHANGE_WAIT = 0.5  # Seconds.
 
@@ -45,3 +46,29 @@ def scan_wait(loop):
                  CHANGE_WAIT, '' if CHANGE_WAIT == 1 else 's')
 
     return songs, delete_files, remove_dirs
+
+
+@asyncio.coroutine
+def convert_cleanup(loop, songs, delete_files, remove_dirs):
+    """Convert songs, delete abandoned songs in target directory, remove empty directories in target directory.
+
+    :param loop: AsyncIO event loop object.
+    :param songs: List of Song instances from scan_wait().
+    :param delete_files: List of files to delete from scan_wait().
+    :param remove_dirs: List of directories to delete from scan_wait().
+    """
+    log = logging.getLogger(__name__)
+    if songs:
+        yield from convert_songs(loop, songs)
+    for file_ in delete_files:
+        log.info('Deleting %s', file_)
+        try:
+            os.remove(file_)
+        except IOError:
+            log.info('Failed to delete %s', file_)
+    for dir_ in sorted(remove_dirs, reverse=True):
+        log.info('Removing empty directory %s', dir_)
+        try:
+            os.rmdir(dir_)
+        except IOError:
+            log.info('Failed to remove %s', dir_)

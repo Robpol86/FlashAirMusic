@@ -5,7 +5,8 @@ import asyncio
 import py
 import pytest
 
-from flash_air_music.convert import control
+from flash_air_music.configuration import DEFAULT_FFMPEG_BINARY
+from flash_air_music.convert import control, discover, transcode
 
 HERE = py.path.local(__file__).dirpath()
 
@@ -31,11 +32,11 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
     :param monkeypatch: pytest fixture.
     :param tmpdir: pytest fixture.
     :param caplog: pytest extension fixture.
-    :param mode: Scenario to test for.
+    :param str mode: Scenario to test for.
     """
     source_file = tmpdir.join('source').ensure_dir().join('song.mp3')
-    config = {'--music-source': source_file.dirname, '--working-dir': str(tmpdir)}
-    monkeypatch.setattr(control, 'GLOBAL_MUTABLE_CONFIG', config)
+    monkeypatch.setattr(control, 'GLOBAL_MUTABLE_CONFIG',
+                        {'--music-source': source_file.dirname, '--working-dir': str(tmpdir)})
     if mode != 'none':
         HERE.join('1khz_sine.mp3').copy(source_file)
 
@@ -66,3 +67,55 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
             assert '1 song still being written to, waiting 0.5 seconds...'
         else:
             assert 'Size/mtime changed for {}'.format(str(source_file)) not in messages
+
+
+@pytest.mark.parametrize('mode', ['nothing', 'normal', 'error'])
+def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
+    """Test convert_cleanup() function.
+
+    :param monkeypatch: pytest fixture.
+    :param tmpdir: pytest fixture.
+    :param caplog: pytest extension fixture.
+    :param str mode: Scenario to test for.
+    """
+    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': DEFAULT_FFMPEG_BINARY, '--threads': '2'})
+    loop = asyncio.get_event_loop()
+
+    if mode == 'nothing':
+        loop.run_until_complete(control.convert_cleanup(loop, [], [], []))
+        assert not [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
+        return
+
+    source_dir = tmpdir.join('source').ensure_dir()
+    target_dir = tmpdir.join('target').ensure_dir()
+    target_dir.join('empty').ensure_dir().join('subdir').ensure_dir()
+    target_dir.join('empty', 'song2.mp3').ensure()
+
+    if mode == 'normal':
+        HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
+    else:
+        target_dir.join('empty').ensure_dir().chmod(0o0544)
+
+    songs, valid_targets = discover.get_songs(str(source_dir), str(target_dir))
+    delete_files, remove_dirs = discover.files_dirs_to_delete(str(target_dir), valid_targets)
+
+    # Run.
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(control.convert_cleanup(loop, songs, delete_files, remove_dirs))
+    messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
+
+    # Verify.
+    assert target_dir.listdir() == [target_dir.join('song1.mp3') if mode == 'normal' else target_dir.join('empty')]
+    if mode == 'normal':
+        assert 'Storing metadata in song1.mp3' in messages
+    assert 'Deleting {}'.format(str(target_dir.join('empty', 'song2.mp3'))) in messages
+    assert 'Removing empty directory {}'.format(str(target_dir.join('empty', 'subdir'))) in messages
+    assert 'Removing empty directory {}'.format(str(target_dir.join('empty'))) in messages
+    if mode == 'error':
+        assert 'Failed to delete {}'.format(str(target_dir.join('empty', 'song2.mp3'))) in messages
+        assert 'Failed to remove {}'.format(str(target_dir.join('empty', 'subdir'))) in messages
+        assert 'Failed to remove {}'.format(str(target_dir.join('empty'))) in messages
+    else:
+        assert 'Failed to delete {}'.format(str(target_dir.join('empty', 'song2.mp3'))) not in messages
+        assert 'Failed to remove {}'.format(str(target_dir.join('empty', 'subdir'))) not in messages
+        assert 'Failed to remove {}'.format(str(target_dir.join('empty'))) not in messages

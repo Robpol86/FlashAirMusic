@@ -102,7 +102,7 @@ def convert_file(loop, song):
 
 
 @asyncio.coroutine
-def bottleneck(semaphore, loop, song):
+def bottleneck(loop, semaphore, song):
     """Wait for semaphore before running convert_file().
 
     :param asyncio.Semaphore semaphore: Semaphore() instance.
@@ -135,7 +135,7 @@ def convert_songs(loop, songs):
 
     # Execute all.
     log.info('Beginning to convert %d file(s) up to %d at a time.', len(songs), workers)
-    nested_results = yield from asyncio.wait([bottleneck(conversion_semaphore, loop, s) for s in songs])
+    nested_results = yield from asyncio.wait([bottleneck(loop, conversion_semaphore, s) for s in songs])
     results = [t for s in nested_results for t in s]
     succeeded = [t for t in (r.result() for r in results if not r.exception()) if t[-1] == 0]
     log.info('Done converting %d file(s) (%d failed).', len(results), len(results) - len(succeeded))
