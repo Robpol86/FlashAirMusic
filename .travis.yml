@@ -15,6 +15,11 @@ matrix:
     script: tox
     after_success: coveralls
 
+  - env: MODE=tests without ffmpeg
+    python: 3.4
+    install: pip install tox
+    script: tox
+
   - env: MODE=fedora:23
     services: [docker]
     install: make docker-build-images

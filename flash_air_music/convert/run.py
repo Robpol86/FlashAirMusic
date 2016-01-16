@@ -72,3 +72,20 @@ def convert_cleanup(loop, songs, delete_files, remove_dirs):
             os.rmdir(dir_)
         except IOError:
             log.info('Failed to remove %s', dir_)
+
+
+@asyncio.coroutine
+def run(loop, semaphore):
+    """Wait for semaphore before running scan_convert_cleanup().
+
+    :param asyncio.Semaphore semaphore: Semaphore() instance.
+    :param loop: AsyncIO event loop object.
+    """
+    log = logging.getLogger(__name__)
+    log.debug('Waiting for semaphore...')
+    with (yield from semaphore):
+        log.debug('Got semaphore lock.')
+        songs, delete_files, remove_dirs = yield from scan_wait(loop)
+        if any([songs, delete_files, remove_dirs]):
+            yield from convert_cleanup(loop, songs, delete_files, remove_dirs)
+    log.debug('Released lock.')

@@ -5,8 +5,8 @@ import asyncio
 import py
 import pytest
 
-from flash_air_music.configuration import DEFAULT_FFMPEG_BINARY
-from flash_air_music.convert import control, discover, transcode
+from flash_air_music.configuration import CONVERTED_MUSIC_SUBDIR, DEFAULT_FFMPEG_BINARY
+from flash_air_music.convert import discover, run, transcode
 
 HERE = py.path.local(__file__).dirpath()
 
@@ -35,7 +35,7 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     source_file = tmpdir.join('source').ensure_dir().join('song.mp3')
-    monkeypatch.setattr(control, 'GLOBAL_MUTABLE_CONFIG',
+    monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG',
                         {'--music-source': source_file.dirname, '--working-dir': str(tmpdir)})
     if mode != 'none':
         HERE.join('1khz_sine.mp3').copy(source_file)
@@ -44,11 +44,11 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
     loop = asyncio.get_event_loop()
     if mode == 'wait':
         nested_results = loop.run_until_complete(asyncio.wait([
-            write_to_file_slowly(caplog, str(source_file)), control.scan_wait(loop)
+            write_to_file_slowly(caplog, str(source_file)), run.scan_wait(loop)
         ]))
         songs, delete_files, remove_dirs = [s for s in nested_results[0] if s.result()][0].result()
     else:
-        songs, delete_files, remove_dirs = loop.run_until_complete(control.scan_wait(loop))
+        songs, delete_files, remove_dirs = loop.run_until_complete(run.scan_wait(loop))
 
     # Verify.
     assert [s.source for s in songs] == ([] if mode == 'none' else [str(source_file)])
@@ -69,6 +69,7 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
             assert 'Size/mtime changed for {}'.format(str(source_file)) not in messages
 
 
+@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
 @pytest.mark.parametrize('mode', ['nothing', 'normal', 'error'])
 def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
     """Test convert_cleanup() function.
@@ -82,7 +83,7 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
     loop = asyncio.get_event_loop()
 
     if mode == 'nothing':
-        loop.run_until_complete(control.convert_cleanup(loop, [], [], []))
+        loop.run_until_complete(run.convert_cleanup(loop, [], [], []))
         assert not [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
         return
 
@@ -101,7 +102,7 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
 
     # Run.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(control.convert_cleanup(loop, songs, delete_files, remove_dirs))
+    loop.run_until_complete(run.convert_cleanup(loop, songs, delete_files, remove_dirs))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify.
@@ -119,3 +120,38 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
         assert 'Failed to delete {}'.format(str(target_dir.join('empty', 'song2.mp3'))) not in messages
         assert 'Failed to remove {}'.format(str(target_dir.join('empty', 'subdir'))) not in messages
         assert 'Failed to remove {}'.format(str(target_dir.join('empty'))) not in messages
+
+
+@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.parametrize('mode', ['nothing', 'something'])
+def test_run(monkeypatch, tmpdir, mode):
+    """Test run() function.
+
+    :param monkeypatch: pytest fixture.
+    :param tmpdir: pytest fixture.
+    :param str mode: Scenario to test for.
+    """
+    source_file = tmpdir.join('source').ensure_dir().join('song.mp3')
+    config = {
+        '--ffmpeg-bin': DEFAULT_FFMPEG_BINARY,
+        '--music-source': source_file.dirname,
+        '--threads': '2',
+        '--working-dir': str(tmpdir),
+    }
+    monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG', config)
+    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', config)
+    loop = asyncio.get_event_loop()
+    semaphore = asyncio.Semaphore(loop=loop)
+
+    if mode == 'nothing':
+        loop.run_until_complete(run.run(loop, semaphore))
+        assert not semaphore.locked()
+        assert not tmpdir.join(CONVERTED_MUSIC_SUBDIR, 'song.mp3').check()
+        return
+
+    tmpdir.join(CONVERTED_MUSIC_SUBDIR).ensure_dir()
+    HERE.join('1khz_sine.mp3').copy(source_file)
+    assert not tmpdir.join(CONVERTED_MUSIC_SUBDIR, 'song.mp3').check()
+    loop.run_until_complete(run.run(loop, semaphore))
+    assert not semaphore.locked()
+    assert tmpdir.join(CONVERTED_MUSIC_SUBDIR, 'song.mp3').check(file=True)

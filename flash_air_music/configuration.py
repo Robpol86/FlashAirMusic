@@ -164,6 +164,10 @@ def initialize_config(doc, argv=None):
         if file_config:
             GLOBAL_MUTABLE_CONFIG.update(file_config)
     _validate_config(GLOBAL_MUTABLE_CONFIG)
+    try:
+        os.mkdir(os.path.realpath(os.path.join(GLOBAL_MUTABLE_CONFIG['--working-dir'], CONVERTED_MUSIC_SUBDIR)))
+    except FileExistsError:
+        pass
     setup_logging(GLOBAL_MUTABLE_CONFIG)
     log = logging.getLogger(__name__)
     log.debug('Read config file. Updated GLOBAL_MUTABLE_CONFIG.')
@@ -192,6 +196,10 @@ def update_config(signum, _):
     except ConfigError:
         return
     GLOBAL_MUTABLE_CONFIG.update(file_config)
+    try:
+        os.mkdir(os.path.realpath(os.path.join(GLOBAL_MUTABLE_CONFIG['--working-dir'], CONVERTED_MUSIC_SUBDIR)))
+    except FileExistsError:
+        pass
     setup_logging(GLOBAL_MUTABLE_CONFIG)
 
     log.info('Done reloading configuration.')

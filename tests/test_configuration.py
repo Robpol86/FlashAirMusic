@@ -335,6 +335,7 @@ def test_update_config(monkeypatch, tmpdir, caplog, mode):
     if mode != 'no_config':
         argv.extend(['--config', str(tmpdir.join('config.yaml'))])
         tmpdir.join('config.yaml').write('{}')
+    tmpdir.join(configuration.CONVERTED_MUSIC_SUBDIR).ensure_dir()
     configuration.initialize_config(doc=doc, argv=argv)
 
     # Setup config file.

@@ -71,6 +71,19 @@ class Song(object):
             self.current_metadata['target_size'] = 0
 
 
+def walk_source(source_dir):
+    """Walk source directory and yield valid file paths.
+
+    :param str source_dir: Source directory.
+
+    :return: Yield file paths.
+    :rtype: str
+    """
+    for path in (os.path.join(root, f) for root, _, files in os.walk(source_dir) for f in files):
+        if os.path.splitext(path)[1].lower() in VALID_SOURCE_EXTENSIONS:
+            yield path
+
+
 def get_songs(source_dir, target_dir):
     """Walk source and target directories looking for files to convert.
 
@@ -84,9 +97,7 @@ def get_songs(source_dir, target_dir):
     valid_targets = list()
     songs = list()
 
-    for path in (os.path.join(root, f) for root, _, files in os.walk(source_dir) for f in files):
-        if os.path.splitext(path)[1].lower() not in VALID_SOURCE_EXTENSIONS:
-            continue
+    for path in walk_source(source_dir):
         song = Song(path, source_dir, target_dir)
         valid_targets.append(song.target)
         if song.needs_conversion:

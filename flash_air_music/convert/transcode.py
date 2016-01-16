@@ -131,7 +131,7 @@ def convert_songs(loop, songs):
     """
     log = logging.getLogger(__name__)
     workers = int(GLOBAL_MUTABLE_CONFIG['--threads']) or os.cpu_count()
-    conversion_semaphore = asyncio.Semaphore(workers)
+    conversion_semaphore = asyncio.Semaphore(workers, loop=loop)
 
     # Execute all.
     log.info('Beginning to convert %d file(s) up to %d at a time.', len(songs), workers)
