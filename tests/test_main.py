@@ -17,10 +17,14 @@ def test_subprocess(monkeypatch, tmpdir, error):
     :param tmpdir: pytest fixture.
     :param bool error: Test startup error handling.
     """
+    source, work = tmpdir.join('source').ensure_dir(), tmpdir.join('work').ensure_dir()
+
     if error:
         tmpdir.join('config.yaml').write('bad')
     else:
-        tmpdir.join('config.yaml').write('verbose: True\nmusic-source: {0}\nworking-dir: {0}'.format(str(tmpdir)))
+        tmpdir.join('config.yaml').write(
+            'verbose: True\nmusic-source: {}\nworking-dir: {}'.format(str(source), str(work))
+        )
     script = find_executable('FlashAirMusic')
     command = [script, 'run', '--config', str(tmpdir.join('config.yaml'))]
     assert os.path.isfile(script)

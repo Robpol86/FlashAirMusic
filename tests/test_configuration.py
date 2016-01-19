@@ -35,10 +35,10 @@ def test_read_config_file(monkeypatch, tmpdir, caplog, bad):
         path.write("""\
             ffmpeg-bin: {1}
             ignore_me: null
-            music-source: {0}
+            music-source: {2}
             verbose: false
             working-dir: {0}
-        """.format(str(tmpdir), str(ffmpeg)))
+        """.format(str(tmpdir), str(ffmpeg), str(tmpdir.join('source').ensure_dir())))
     argv = ['run', '--config', str(path)]
 
     if not bad:
@@ -49,7 +49,7 @@ def test_read_config_file(monkeypatch, tmpdir, caplog, bad):
             '--help': False,
             '--log': None,
             '--mac-addr': None,
-            '--music-source': str(tmpdir),
+            '--music-source': str(tmpdir.join('source')),
             '--quiet': False,
             '--threads': '0',
             '--verbose': False,
@@ -86,7 +86,7 @@ def test_validate_config_log(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir)]
+    argv = ['run', '--music-source', str(tmpdir.join('source').ensure_dir())]
     if mode != 'not_used':
         argv.extend(['--log', str(tmpdir.join('parent', 'logfile.log'))])
 
@@ -158,7 +158,7 @@ def test_validate_config_music_source(monkeypatch, tmpdir, caplog, mode):
         assert messages[-1].startswith('No access to music source directory')
 
 
-@pytest.mark.parametrize('mode', ['specified', 'default', 'dne', 'perm', 'collision'])
+@pytest.mark.parametrize('mode', ['specified', 'default', 'dne', 'perm', 'collision', 'collision within'])
 def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     """Test _validate_config() --working-dir validation via initialize_config().
 
@@ -177,8 +177,10 @@ def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     argv = ['run']
     if mode == 'collision':
         argv.extend(['--music-source', str(tmpdir.join(configuration.CONVERTED_MUSIC_SUBDIR).ensure_dir())])
-    else:
+    elif mode == 'collision within':
         argv.extend(['--music-source', str(tmpdir)])
+    else:
+        argv.extend(['--music-source', str(tmpdir.join('source').ensure_dir())])
         if mode != 'default':
             argv.extend(['--working-dir', str(tmpdir.join('not_default'))])
 
@@ -200,7 +202,7 @@ def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     elif mode == 'perm':
         assert messages[-1].startswith('No access to working directory')
     else:
-        assert messages[-1] == 'Music source dir cannot match working directory converted music subdir.'
+        assert messages[-1] == 'Working directory converted music subdir cannot be in music source dir.'
 
 
 @pytest.mark.parametrize('mode', ['missing', 'contiguous', 'hyphens', 'colons', 'spaces', 'bad'])
@@ -219,7 +221,7 @@ def test_validate_config_mac_addr(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir)]
+    argv = ['run', '--music-source', str(tmpdir.join('source').ensure_dir())]
     if mode == 'contiguous':
         argv.extend(['--mac-addr', 'aaBBccDDeeFF'])
     elif mode == 'hyphens':
@@ -261,7 +263,7 @@ def test_validate_config_threads(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir)]
+    argv = ['run', '--music-source', str(tmpdir.join('source').ensure_dir())]
     if mode != 'default':
         argv.extend(['--threads', mode])
 
@@ -295,7 +297,7 @@ def test_validate_config_ffmpeg_bin(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir)]
+    argv = ['run', '--music-source', str(tmpdir.join('source').ensure_dir())]
     if mode == 'specified':
         argv.extend(['--ffmpeg-bin', str(ffmpeg)])
 
@@ -331,7 +333,7 @@ def test_update_config(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir)]
+    argv = ['run', '--music-source', str(tmpdir.join('source').ensure_dir())]
     if mode != 'no_config':
         argv.extend(['--config', str(tmpdir.join('config.yaml'))])
         tmpdir.join('config.yaml').write('{}')

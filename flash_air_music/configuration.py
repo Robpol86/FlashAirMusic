@@ -120,8 +120,8 @@ def _validate_config(config, file_config=None):  # pylint:disable=too-many-branc
         logging.getLogger(__name__).error('No access to working directory: %s', config['--working-dir'])
         raise ConfigError
     if os.path.realpath(os.path.join(config['--working-dir'],
-                                     CONVERTED_MUSIC_SUBDIR)) == os.path.realpath(config['--music-source']):
-        logging.getLogger(__name__).error('Music source dir cannot match working directory converted music subdir.')
+                                     CONVERTED_MUSIC_SUBDIR)).startswith(os.path.realpath(config['--music-source'])):
+        logging.getLogger(__name__).error('Working directory converted music subdir cannot be in music source dir.')
         raise ConfigError
 
     # --mac-addr
