@@ -63,7 +63,7 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
     if mode == 'wait':
         nested_results = loop.run_until_complete(asyncio.wait([
             write_to_file_slowly(caplog, str(source_file)), run.scan_wait(loop)
-        ]))
+        ], timeout=30))
         songs, delete_files, remove_dirs = [s for s in nested_results[0] if s.result()][0].result()
     else:
         songs, delete_files, remove_dirs = loop.run_until_complete(run.scan_wait(loop))
@@ -212,7 +212,7 @@ def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
     loop.run_until_complete(asyncio.wait([
         shutdown_after_start(loop, shutdown_future, caplog, signum),
         run.run(loop, semaphore, shutdown_future),
-    ]))
+    ], timeout=30))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     assert [i for i in messages if i.startswith('Caught signal {}'.format(signum))]
