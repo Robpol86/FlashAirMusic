@@ -6,8 +6,9 @@ import os
 import signal
 import time
 
-from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
+from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG, SIGNALS_INT_TO_NAME
 from flash_air_music.convert.id3_flac_tags import write_stored_metadata
+from flash_air_music.exceptions import ShuttingDown
 
 SLEEP_FOR = 1  # Seconds.
 TIMEOUT = 5 * 60  # Seconds.
@@ -39,16 +40,20 @@ class Protocol(asyncio.SubprocessProtocol):
 
 
 @asyncio.coroutine
-def convert_file(loop, song):
+def convert_file(loop, shutdown_future, song):
     """Convert one file to mp3. Store metadata in ID3 comment tag.
 
     :param loop: AsyncIO event loop object.
+    :param asyncio.Future shutdown_future: Shutdown signal.
     :param flash_air_music.convert.discover.Song song: Song instance.
 
     :return: Same Song instance, command, and exit status of command.
     :rtype: tuple
     """
     log = logging.getLogger(__name__)
+    if shutdown_future.done():
+        log.debug('Skipping due to shutdown_future signal.')
+        raise ShuttingDown
     start_time = time.time()
     timeout_signals = [signal.SIGKILL, signal.SIGTERM, signal.SIGINT]  # reverse order.
     command = [
@@ -71,7 +76,13 @@ def convert_file(loop, song):
     log.debug('Process %d started with command %s with timeout %d.', pid, str(command), TIMEOUT)
     while not protocol.exit_future.done():
         log.debug('Process %d still running...', pid)
-        if time.time() - start_time > TIMEOUT and timeout_signals:
+        if shutdown_future.done():
+            send_signal = timeout_signals.pop()
+            if send_signal == signal.SIGINT and shutdown_future.result() != signal.SIGINT:
+                send_signal = timeout_signals.pop()  # Start with SIGTERM instead.
+            log.info('Service shutdown initiated, sending %s to %d', '/'.join(SIGNALS_INT_TO_NAME[send_signal]), pid)
+            transport.send_signal(send_signal)
+        elif time.time() - start_time > TIMEOUT and timeout_signals:
             send_signal = timeout_signals.pop()
             log.warning('Timeout exceeded, sending signal %d to pid %d.', send_signal, pid)
             transport.send_signal(send_signal)
@@ -102,11 +113,12 @@ def convert_file(loop, song):
 
 
 @asyncio.coroutine
-def bottleneck(loop, semaphore, song):
+def bottleneck(loop, semaphore, shutdown_future, song):
     """Wait for semaphore before running convert_file().
 
-    :param asyncio.Semaphore semaphore: Semaphore() instance.
     :param loop: AsyncIO event loop object.
+    :param asyncio.Semaphore semaphore: Semaphore() instance.
+    :param asyncio.Future shutdown_future: Shutdown signal.
     :param flash_air_music.convert.discover.Song song: Song instance.
 
     :return: convert_file() return value.
@@ -117,16 +129,17 @@ def bottleneck(loop, semaphore, song):
     try:
         with (yield from semaphore):
             log.debug('%s: got semaphore lock.', song.name)
-            return (yield from convert_file(loop, song))
+            return (yield from convert_file(loop, shutdown_future, song))
     finally:
         log.debug('%s: released lock.', song.name)
 
 
 @asyncio.coroutine
-def convert_songs(loop, songs):
+def convert_songs(loop, shutdown_future, songs):
     """Convert all songs concurrently.
 
     :param loop: AsyncIO event loop object.
+    :param asyncio.Future shutdown_future: Shutdown signal.
     :param iter songs: List of Song instances.
     """
     log = logging.getLogger(__name__)
@@ -135,8 +148,8 @@ def convert_songs(loop, songs):
 
     # Execute all.
     log.info('Beginning to convert %d file(s) up to %d at a time.', len(songs), workers)
-    nested_results = yield from asyncio.wait([bottleneck(loop, conversion_semaphore, s) for s in songs])
-    results = [t for s in nested_results for t in s]
+    nested = yield from asyncio.wait([bottleneck(loop, conversion_semaphore, shutdown_future, s) for s in songs])
+    results = [t for s in nested for t in s]
     succeeded = [t for t in (r.result() for r in results if not r.exception()) if t[-1] == 0]
     log.info('Done converting %d file(s) (%d failed).', len(results), len(results) - len(succeeded))
 
@@ -145,5 +158,7 @@ def convert_songs(loop, songs):
         # noinspection PyBroadException
         try:
             future.result()
+        except ShuttingDown:
+            pass
         except Exception:  # pylint: disable=broad-except
             log.exception('BUG! Exception raised in coroutine.')

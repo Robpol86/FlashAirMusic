@@ -17,3 +17,9 @@ class CorruptedTargetFile(BaseError):
     """Error while operating on convered target file."""
 
     pass
+
+
+class ShuttingDown(BaseError):
+    """Raised when shutdown_future is set."""
+
+    pass

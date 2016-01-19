@@ -22,12 +22,14 @@ Options:
     -w DIR --working-dir=DIR    Working directory for converted music, etc.
 """
 
+import asyncio
 import logging
 import signal
 import sys
 import time
 
-from flash_air_music import configuration, exceptions
+from flash_air_music.configuration import initialize_config, SIGNALS_INT_TO_NAME, update_config
+from flash_air_music.exceptions import BaseError
 
 
 def main():
@@ -39,7 +41,7 @@ def main():
         time.sleep(0.5)
 
 
-def shutdown(*_):
+def shutdown_old(*_):
     """Cleanup and shut down the program.
 
     :param _: Ignored.
@@ -49,14 +51,26 @@ def shutdown(*_):
     sys.exit(0)
 
 
+@asyncio.coroutine
+def shutdown(signum, shutdown_future):
+    """Cleanup and shut down the program.
+
+    :param int signum: Signal caught.
+    :param asyncio.Future shutdown_future: Signals process shutdown to periodic coroutines.
+    """
+    log = logging.getLogger(__name__)
+    log.info('Caught signal %d (%s). Shutting down.', signum, '/'.join(SIGNALS_INT_TO_NAME[signum]))
+    shutdown_future.set_result(signum)
+
+
 def entry_point():
     """Entry-point from setuptools."""
-    signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
+    signal.signal(signal.SIGINT, shutdown_old)
+    signal.signal(signal.SIGTERM, shutdown_old)
     try:
-        configuration.initialize_config(doc=__doc__)
-        signal.signal(signal.SIGHUP, configuration.update_config)
+        initialize_config(doc=__doc__)
+        signal.signal(signal.SIGHUP, update_config)
         main()
-    except exceptions.BaseError:
+    except BaseError:
         logging.critical('Failure.')
         sys.exit(1)

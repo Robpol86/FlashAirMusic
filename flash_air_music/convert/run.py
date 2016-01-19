@@ -49,17 +49,18 @@ def scan_wait(loop):
 
 
 @asyncio.coroutine
-def convert_cleanup(loop, songs, delete_files, remove_dirs):
+def convert_cleanup(loop, shutdown_future, songs, delete_files, remove_dirs):
     """Convert songs, delete abandoned songs in target directory, remove empty directories in target directory.
 
     :param loop: AsyncIO event loop object.
+    :param asyncio.Future shutdown_future: Shutdown signal.
     :param songs: List of Song instances from scan_wait().
     :param delete_files: List of files to delete from scan_wait().
     :param remove_dirs: List of directories to delete from scan_wait().
     """
     log = logging.getLogger(__name__)
     if songs:
-        yield from convert_songs(loop, songs)
+        yield from convert_songs(loop, shutdown_future, songs)
     for file_ in delete_files:
         log.info('Deleting %s', file_)
         try:
@@ -75,11 +76,12 @@ def convert_cleanup(loop, songs, delete_files, remove_dirs):
 
 
 @asyncio.coroutine
-def run(loop, semaphore):
+def run(loop, semaphore, shutdown_future):
     """Wait for semaphore before running scan_convert_cleanup().
 
-    :param asyncio.Semaphore semaphore: Semaphore() instance.
     :param loop: AsyncIO event loop object.
+    :param asyncio.Semaphore semaphore: Semaphore() instance.
+    :param asyncio.Future shutdown_future: Shutdown signal.
     """
     log = logging.getLogger(__name__)
     log.debug('Waiting for semaphore...')
@@ -87,5 +89,5 @@ def run(loop, semaphore):
         log.debug('Got semaphore lock.')
         songs, delete_files, remove_dirs = yield from scan_wait(loop)
         if any([songs, delete_files, remove_dirs]):
-            yield from convert_cleanup(loop, songs, delete_files, remove_dirs)
+            yield from convert_cleanup(loop, shutdown_future, songs, delete_files, remove_dirs)
     log.debug('Released lock.')
