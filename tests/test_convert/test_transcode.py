@@ -25,8 +25,8 @@ def test_convert_file_success(monkeypatch, tmpdir, caplog):
     """
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': DEFAULT_FFMPEG_BINARY})
     monkeypatch.setattr(transcode, 'SLEEP_FOR', 0.1)
-    source_dir = tmpdir.join('source').ensure_dir()
-    target_dir = tmpdir.join('target').ensure_dir()
+    source_dir = tmpdir.ensure_dir('source')
+    target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
     song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
     assert song.needs_conversion is True
@@ -67,8 +67,8 @@ def test_convert_file_failure(monkeypatch, tmpdir, caplog, delete):
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg)})
     monkeypatch.setattr(transcode, 'SLEEP_FOR', 0.1)
-    source_dir = tmpdir.join('source').ensure_dir()
-    target_dir = tmpdir.join('target').ensure_dir()
+    source_dir = tmpdir.ensure_dir('source')
+    target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
     if delete:
         HERE.join('1khz_sine.mp3').copy(target_dir.join('song1.mp3'))
@@ -93,9 +93,9 @@ def test_convert_file_failure(monkeypatch, tmpdir, caplog, delete):
     assert any(command_str in m for m in messages)
     assert any(re.match(r'^Process \d+ exited 1$', m) for m in messages)
     if delete:
-        assert 'Removing {}'.format(str(target_dir.join('song1.mp3'))) in messages
+        assert 'Removing {}'.format(target_dir.join('song1.mp3')) in messages
     else:
-        assert 'Removing {}'.format(str(target_dir.join('song1.mp3'))) not in messages
+        assert 'Removing {}'.format(target_dir.join('song1.mp3')) not in messages
 
 
 @pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
@@ -115,8 +115,8 @@ def test_convert_file_deadlock(monkeypatch, tmpdir, caplog):
     """))
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg)})
-    source_dir = tmpdir.join('source').ensure_dir()
-    target_dir = tmpdir.join('target').ensure_dir()
+    source_dir = tmpdir.ensure_dir('source')
+    target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
     song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
 
@@ -164,8 +164,8 @@ def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
     monkeypatch.setattr(transcode, 'SLEEP_FOR', 0.1)
     monkeypatch.setattr(transcode, 'TIMEOUT', 0.5)
     monkeypatch.setenv('EXIT_SIGNAL', exit_signal)
-    source_dir = tmpdir.join('source').ensure_dir()
-    target_dir = tmpdir.join('target').ensure_dir()
+    source_dir = tmpdir.ensure_dir('source')
+    target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
     song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
 
@@ -210,8 +210,8 @@ def test_convert_songs_errors(monkeypatch, tmpdir, caplog, mode):
         ffmpeg.chmod(0o0755)
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg), '--threads': '2'})
     monkeypatch.setenv('ERROR_ON', 'song1.mp3' if mode == 'failure' else '')
-    source_dir = tmpdir.join('source').ensure_dir()
-    target_dir = tmpdir.join('target').ensure_dir()
+    source_dir = tmpdir.ensure_dir('source')
+    target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song2.mp3'))
     songs = get_songs(str(source_dir), str(target_dir))[0]
@@ -251,8 +251,8 @@ def test_convert_songs_single(monkeypatch, tmpdir, caplog):
     :param caplog: pytest extension fixture.
     """
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': DEFAULT_FFMPEG_BINARY, '--threads': '2'})
-    source_dir = tmpdir.join('source').ensure_dir()
-    target_dir = tmpdir.join('target').ensure_dir()
+    source_dir = tmpdir.ensure_dir('source')
+    target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
     songs = get_songs(str(source_dir), str(target_dir))[0]
 
@@ -285,8 +285,8 @@ def test_convert_songs_semaphore(monkeypatch, tmpdir, caplog):
     """))
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg), '--threads': '2'})
-    source_dir = tmpdir.join('source').ensure_dir()
-    target_dir = tmpdir.join('target').ensure_dir()
+    source_dir = tmpdir.ensure_dir('source')
+    target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song2.mp3'))
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song3.mp3'))

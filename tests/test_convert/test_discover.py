@@ -20,8 +20,8 @@ def test_song(tmpdir, mode):
     :param tmpdir: pytest fixture.
     :param str mode: Scenario to test for.
     """
-    source_file = tmpdir.join('source').ensure_dir().join('song.mp3')
-    target_file = tmpdir.join('target').ensure_dir().join('song.mp3')
+    source_file = tmpdir.ensure_dir('source').join('song.mp3')
+    target_file = tmpdir.ensure_dir('target').join('song.mp3')
     HERE.join('1khz_sine.mp3').copy(source_file)
 
     # Write metadata.
@@ -48,7 +48,7 @@ def test_song(tmpdir, mode):
     assert song.source == str(source_file)
     assert song.target == str(target_file)
     assert song.needs_conversion is (False if mode == 'up to date' else True)
-    assert repr(song) == '<Song name=song.mp3 changed=False needs_conversion={}>'.format(str(song.needs_conversion))
+    assert repr(song) == '<Song name=song.mp3 changed=False needs_conversion={}>'.format(song.needs_conversion)
     assert song.changed is False
 
     # Test changed.
@@ -63,8 +63,8 @@ def test_get_songs(tmpdir):
 
     :param tmpdir: pytest fixture.
     """
-    source_dir = tmpdir.join('source').ensure_dir()
-    target_dir = tmpdir.join('target').ensure_dir()
+    source_dir = tmpdir.ensure_dir('source')
+    target_dir = tmpdir.ensure_dir('target')
 
     # Test empty.
     songs, valid_targets = discover.get_songs(str(source_dir), str(target_dir))
@@ -72,7 +72,7 @@ def test_get_songs(tmpdir):
     assert not valid_targets
 
     # Test ignore.
-    source_dir.join('ignore.txt').ensure()
+    source_dir.ensure('ignore.txt')
     songs, valid_targets = discover.get_songs(str(source_dir), str(target_dir))
     assert not songs
     assert not valid_targets
@@ -109,12 +109,12 @@ def test_get_songs_subdirectories(tmpdir):
     :param tmpdir: pytest fixture.
     """
     # Setup directory structure.
-    source_dir = tmpdir.join('source').ensure_dir()
-    source_dir_a = source_dir.join('a').ensure_dir()
-    source_dir_b = source_dir.join('b').ensure_dir()
-    source_dir_c = source_dir.join('b', 'c').ensure_dir()
-    source_dir_d = source_dir.join('b', 'c', 'd').ensure_dir()
-    target_dir = tmpdir.join('target').ensure_dir()
+    source_dir = tmpdir.ensure_dir('source')
+    source_dir_a = source_dir.ensure_dir('a')
+    source_dir_b = source_dir.ensure_dir('b')
+    source_dir_c = source_dir.ensure_dir('b', 'c')
+    source_dir_d = source_dir.ensure_dir('b', 'c', 'd')
+    target_dir = tmpdir.ensure_dir('target')
 
     # Copy files.
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
@@ -151,7 +151,7 @@ def test_files_dirs_to_delete(tmpdir):
 
     :param tmpdir: pytest fixture.
     """
-    target_dir = tmpdir.join('target').ensure_dir()
+    target_dir = tmpdir.ensure_dir('target')
     valid_targets = list()
 
     # Test empty.
@@ -160,19 +160,19 @@ def test_files_dirs_to_delete(tmpdir):
     assert not remove_dirs
 
     # Test ignore.
-    target_dir.join('ignore.txt').ensure()
-    target_dir.join('not_empty').ensure_dir().join('ignore.txt').ensure()
+    target_dir.ensure('ignore.txt')
+    target_dir.ensure_dir('not_empty').ensure('ignore.txt')
     delete_files, remove_dirs = discover.files_dirs_to_delete(str(target_dir), valid_targets)
     assert not delete_files
     assert not remove_dirs
 
     # Setup filesystem.
-    expected_delete, expected_remove = set(), {str(target_dir.join('remove_this_dir').ensure_dir())}
-    expected_delete.add(str(target_dir.join('remove_this_dir', 'remove_me.mp3').ensure()))
-    expected_delete.add(str(target_dir.join('remove_me_too.mp3').ensure()))
-    expected_remove.add(str(target_dir.join('remove_this_dir_too').ensure_dir()))
-    valid_targets.append(str(target_dir.join('keep_me.mp3').ensure()))
-    valid_targets.append(str(target_dir.join('keep_this').ensure_dir().join('keep_me.mp3').ensure()))
+    expected_delete, expected_remove = set(), {str(target_dir.ensure_dir('remove_this_dir'))}
+    expected_delete.add(str(target_dir.ensure('remove_this_dir', 'remove_me.mp3')))
+    expected_delete.add(str(target_dir.ensure('remove_me_too.mp3')))
+    expected_remove.add(str(target_dir.ensure_dir('remove_this_dir_too')))
+    valid_targets.append(str(target_dir.ensure('keep_me.mp3')))
+    valid_targets.append(str(target_dir.ensure_dir('keep_this').ensure('keep_me.mp3')))
 
     # Test those files.
     delete_files, remove_dirs = discover.files_dirs_to_delete(str(target_dir), valid_targets)

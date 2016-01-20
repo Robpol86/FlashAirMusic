@@ -69,8 +69,8 @@ def test_write_stored_metadata(tmpdir, caplog):
     :param tmpdir: pytest fixture.
     :param caplog: pytest extension fixture.
     """
-    source_file = tmpdir.join('source').ensure_dir().join('song.mp3').ensure()
-    target_file = tmpdir.join('target').ensure_dir().join('song.mp3').ensure()
+    source_file = tmpdir.ensure_dir('source').ensure('song.mp3')
+    target_file = tmpdir.ensure_dir('target').ensure('song.mp3')
     song = Song(str(source_file), source_file.dirname, target_file.dirname)
 
     # Test empty file.

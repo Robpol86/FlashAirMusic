@@ -16,7 +16,7 @@ def test_read_config_file(monkeypatch, tmpdir, caplog, bad):
     :param str bad: Scenario to test for.
     """
     config = dict()
-    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
@@ -38,7 +38,7 @@ def test_read_config_file(monkeypatch, tmpdir, caplog, bad):
             music-source: {2}
             verbose: false
             working-dir: {0}
-        """.format(str(tmpdir), str(ffmpeg), str(tmpdir.join('source').ensure_dir())))
+        """.format(tmpdir, ffmpeg, tmpdir.ensure_dir('source')))
     argv = ['run', '--config', str(path)]
 
     if not bad:
@@ -80,22 +80,22 @@ def test_validate_config_log(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
-    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir.join('source').ensure_dir())]
+    argv = ['run', '--music-source', str(tmpdir.ensure_dir('source'))]
     if mode != 'not_used':
         argv.extend(['--log', str(tmpdir.join('parent', 'logfile.log'))])
 
     if mode != 'no_parent':
-        tmpdir.join('parent').ensure_dir()
+        tmpdir.ensure_dir('parent')
     if mode == 'dir_perm':
         tmpdir.join('parent').chmod(0o444)
     elif mode == 'file_perm':
-        tmpdir.join('parent', 'logfile.log').ensure().chmod(0o444)
+        tmpdir.ensure('parent', 'logfile.log').chmod(0o444)
 
     if mode in ('not_used', 'used'):
         configuration.initialize_config(doc=doc, argv=argv)
@@ -127,7 +127,7 @@ def test_validate_config_music_source(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
-    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
@@ -138,7 +138,7 @@ def test_validate_config_music_source(monkeypatch, tmpdir, caplog, mode):
         argv.extend(['--music-source', str(tmpdir.join('music'))])
 
     if mode != 'dne':
-        tmpdir.join('music').ensure_dir()
+        tmpdir.ensure_dir('music')
     if mode == 'perm':
         tmpdir.join('music').chmod(0o444)
 
@@ -168,7 +168,7 @@ def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
-    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
@@ -176,16 +176,16 @@ def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
     argv = ['run']
     if mode == 'collision':
-        argv.extend(['--music-source', str(tmpdir.join(configuration.CONVERTED_MUSIC_SUBDIR).ensure_dir())])
+        argv.extend(['--music-source', str(tmpdir.ensure_dir(configuration.CONVERTED_MUSIC_SUBDIR))])
     elif mode == 'collision within':
         argv.extend(['--music-source', str(tmpdir)])
     else:
-        argv.extend(['--music-source', str(tmpdir.join('source').ensure_dir())])
+        argv.extend(['--music-source', str(tmpdir.ensure_dir('source'))])
         if mode != 'default':
             argv.extend(['--working-dir', str(tmpdir.join('not_default'))])
 
     if mode != 'dne':
-        tmpdir.join('not_default').ensure_dir()
+        tmpdir.ensure_dir('not_default')
     if mode == 'perm':
         tmpdir.join('not_default').chmod(0o444)
 
@@ -215,13 +215,13 @@ def test_validate_config_mac_addr(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
-    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir.join('source').ensure_dir())]
+    argv = ['run', '--music-source', str(tmpdir.ensure_dir('source'))]
     if mode == 'contiguous':
         argv.extend(['--mac-addr', 'aaBBccDDeeFF'])
     elif mode == 'hyphens':
@@ -257,13 +257,13 @@ def test_validate_config_threads(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
-    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir.join('source').ensure_dir())]
+    argv = ['run', '--music-source', str(tmpdir.ensure_dir('source'))]
     if mode != 'default':
         argv.extend(['--threads', mode])
 
@@ -297,7 +297,7 @@ def test_validate_config_ffmpeg_bin(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir.join('source').ensure_dir())]
+    argv = ['run', '--music-source', str(tmpdir.ensure_dir('source'))]
     if mode == 'specified':
         argv.extend(['--ffmpeg-bin', str(ffmpeg)])
 
@@ -327,17 +327,17 @@ def test_update_config(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = dict()
-    ffmpeg = tmpdir.join('ffmpeg').ensure()
+    ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
     monkeypatch.setattr(configuration, 'DEFAULT_WORKING_DIR', str(tmpdir))
     monkeypatch.setattr(configuration, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(configuration, 'setup_logging', lambda _: None)
-    argv = ['run', '--music-source', str(tmpdir.join('source').ensure_dir())]
+    argv = ['run', '--music-source', str(tmpdir.ensure_dir('source'))]
     if mode != 'no_config':
         argv.extend(['--config', str(tmpdir.join('config.yaml'))])
         tmpdir.join('config.yaml').write('{}')
-    tmpdir.join(configuration.CONVERTED_MUSIC_SUBDIR).ensure_dir()
+    tmpdir.ensure_dir(configuration.CONVERTED_MUSIC_SUBDIR)
     configuration.initialize_config(doc=doc, argv=argv)
 
     # Setup config file.
@@ -368,5 +368,5 @@ def test_update_config(monkeypatch, tmpdir, caplog, mode):
         assert messages[-1] == 'Invalid MAC address: Invalid'
     else:
         assert config == before
-        assert messages[-1] == 'Config file {} empty.'.format(str(tmpdir.join('config.yaml')))
+        assert messages[-1] == 'Config file {} empty.'.format(tmpdir.join('config.yaml'))
     assert [m for m in messages if 'Caught signal' in m]

@@ -47,7 +47,7 @@ def alter_file_system(loop, shutdown_future, caplog, tmpdir):
 
     # Alter again in subdirectory by adding new file.
     before_count = len([True for r in caplog.records if r.message.startswith('watch_directory() file system changed')])
-    tmpdir.join('subdir', 'subdir2', 'subdir3').ensure_dir().join('song5.mp3').write('\x00\x00\x00')
+    tmpdir.ensure_dir('subdir', 'subdir2', 'subdir3').join('song5.mp3').write('\x00\x00\x00')
     while True:
         count = len([True for r in caplog.records if r.message.startswith('watch_directory() file system changed')])
         if count > before_count:
@@ -85,7 +85,7 @@ def test_periodically_convert(monkeypatch, tmpdir, caplog, mode):
     :param str mode: Scenario to test for.
     """
     config = {
-        '--music-source': str(tmpdir.join('source').ensure_dir()),
+        '--music-source': str(tmpdir.ensure_dir('source')),
         '--threads': '2',
         '--working-dir': str(tmpdir),
     }
@@ -119,8 +119,8 @@ def test_watch_directory(monkeypatch, tmpdir, caplog):
     """
     tmpdir.join('song1.mp3').write('\x00\x00\x00\x00\x00')
     tmpdir.join('song2.mp3').write('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
-    tmpdir.join('subdir').ensure_dir().join('song3.mp3').write('\x00\x00')
-    tmpdir.join('subdir', 'subdir2').ensure_dir().join('song4.mp3').write('\x00\x00\x00')
+    tmpdir.ensure_dir('subdir').join('song3.mp3').write('\x00\x00')
+    tmpdir.ensure_dir('subdir', 'subdir2').join('song4.mp3').write('\x00\x00\x00')
 
     monkeypatch.setattr('flash_air_music.convert.periodicals.EVERY_SECONDS_WATCH', 1)
     monkeypatch.setattr('flash_air_music.convert.periodicals.GLOBAL_MUTABLE_CONFIG', {'--music-source': str(tmpdir)})

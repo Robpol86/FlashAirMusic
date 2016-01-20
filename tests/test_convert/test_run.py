@@ -52,7 +52,7 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
     :param caplog: pytest extension fixture.
     :param str mode: Scenario to test for.
     """
-    source_file = tmpdir.join('source').ensure_dir().join('song.mp3')
+    source_file = tmpdir.ensure_dir('source').join('song.mp3')
     monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG',
                         {'--music-source': source_file.dirname, '--working-dir': str(tmpdir)})
     if mode != 'none':
@@ -81,10 +81,10 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
     else:
         assert 'Found: 1 new source song, 0 orphaned target songs, 0 empty directories.' in messages
         if mode == 'wait':
-            assert 'Size/mtime changed for {}'.format(str(source_file)) in messages
+            assert 'Size/mtime changed for {}'.format(source_file) in messages
             assert '1 song still being written to, waiting 0.5 seconds...'
         else:
-            assert 'Size/mtime changed for {}'.format(str(source_file)) not in messages
+            assert 'Size/mtime changed for {}'.format(source_file) not in messages
 
 
 @pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
@@ -105,15 +105,15 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
         assert not [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
         return
 
-    source_dir = tmpdir.join('source').ensure_dir()
-    target_dir = tmpdir.join('target').ensure_dir()
-    target_dir.join('empty').ensure_dir().join('subdir').ensure_dir()
-    target_dir.join('empty', 'song2.mp3').ensure()
+    source_dir = tmpdir.ensure_dir('source')
+    target_dir = tmpdir.ensure_dir('target')
+    target_dir.ensure_dir('empty').ensure_dir('subdir')
+    target_dir.ensure('empty', 'song2.mp3')
 
     if mode == 'normal':
         HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
     else:
-        target_dir.join('empty').ensure_dir().chmod(0o0544)
+        target_dir.ensure_dir('empty').chmod(0o0544)
 
     songs, valid_targets = discover.get_songs(str(source_dir), str(target_dir))
     delete_files, remove_dirs = discover.files_dirs_to_delete(str(target_dir), valid_targets)
@@ -127,17 +127,17 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
     assert target_dir.listdir() == [target_dir.join('song1.mp3') if mode == 'normal' else target_dir.join('empty')]
     if mode == 'normal':
         assert 'Storing metadata in song1.mp3' in messages
-    assert 'Deleting {}'.format(str(target_dir.join('empty', 'song2.mp3'))) in messages
-    assert 'Removing empty directory {}'.format(str(target_dir.join('empty', 'subdir'))) in messages
-    assert 'Removing empty directory {}'.format(str(target_dir.join('empty'))) in messages
+    assert 'Deleting {}'.format(target_dir.join('empty', 'song2.mp3')) in messages
+    assert 'Removing empty directory {}'.format(target_dir.join('empty', 'subdir')) in messages
+    assert 'Removing empty directory {}'.format(target_dir.join('empty')) in messages
     if mode == 'error':
-        assert 'Failed to delete {}'.format(str(target_dir.join('empty', 'song2.mp3'))) in messages
-        assert 'Failed to remove {}'.format(str(target_dir.join('empty', 'subdir'))) in messages
-        assert 'Failed to remove {}'.format(str(target_dir.join('empty'))) in messages
+        assert 'Failed to delete {}'.format(target_dir.join('empty', 'song2.mp3')) in messages
+        assert 'Failed to remove {}'.format(target_dir.join('empty', 'subdir')) in messages
+        assert 'Failed to remove {}'.format(target_dir.join('empty')) in messages
     else:
-        assert 'Failed to delete {}'.format(str(target_dir.join('empty', 'song2.mp3'))) not in messages
-        assert 'Failed to remove {}'.format(str(target_dir.join('empty', 'subdir'))) not in messages
-        assert 'Failed to remove {}'.format(str(target_dir.join('empty'))) not in messages
+        assert 'Failed to delete {}'.format(target_dir.join('empty', 'song2.mp3')) not in messages
+        assert 'Failed to remove {}'.format(target_dir.join('empty', 'subdir')) not in messages
+        assert 'Failed to remove {}'.format(target_dir.join('empty')) not in messages
 
 
 @pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
@@ -149,7 +149,7 @@ def test_run(monkeypatch, tmpdir, mode):
     :param tmpdir: pytest fixture.
     :param str mode: Scenario to test for.
     """
-    source_file = tmpdir.join('source').ensure_dir().join('song.mp3')
+    source_file = tmpdir.ensure_dir('source').join('song.mp3')
     config = {
         '--ffmpeg-bin': DEFAULT_FFMPEG_BINARY,
         '--music-source': source_file.dirname,
@@ -167,7 +167,7 @@ def test_run(monkeypatch, tmpdir, mode):
         assert not tmpdir.join(CONVERTED_MUSIC_SUBDIR, 'song.mp3').check()
         return
 
-    tmpdir.join(CONVERTED_MUSIC_SUBDIR).ensure_dir()
+    tmpdir.ensure_dir(CONVERTED_MUSIC_SUBDIR)
     HERE.join('1khz_sine.mp3').copy(source_file)
     assert not tmpdir.join(CONVERTED_MUSIC_SUBDIR, 'song.mp3').check()
     loop.run_until_complete(run.run(loop, semaphore, asyncio.Future()))
@@ -192,10 +192,10 @@ def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
     sys.exit(3)
     """))
     ffmpeg.chmod(0o0755)
-    source_dir = tmpdir.join('source').ensure_dir()
+    source_dir = tmpdir.ensure_dir('source')
     for i in range(10):
-        source_dir.join('song{}.mp3'.format(i)).ensure()
-    tmpdir.join(CONVERTED_MUSIC_SUBDIR).ensure_dir()
+        source_dir.ensure('song{}.mp3'.format(i))
+    tmpdir.ensure_dir(CONVERTED_MUSIC_SUBDIR)
 
     config = {
         '--ffmpeg-bin': str(ffmpeg),
