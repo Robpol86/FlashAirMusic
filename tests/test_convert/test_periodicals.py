@@ -10,31 +10,29 @@ from flash_air_music.convert.periodicals import periodically_convert, watch_dire
 
 
 @asyncio.coroutine
-def shutdown_after_string(loop, shutdown_future, caplog, stop_after):
+def shutdown_after_string(shutdown_future, caplog, stop_after):
     """Stop loop after `stop_after` is found in log records.
 
-    :param loop: AsyncIO event loop object.
     :param asyncio.Future shutdown_future: Shutdown signal.
     :param caplog: pytest extension fixture.
     :param str stop_after: String to watch for in caplog.records.
     """
     while not any(True for r in caplog.records if r.message == stop_after):
-        yield from asyncio.sleep(0.1, loop=loop)
+        yield from asyncio.sleep(0.1)
     yield from shutdown(signal.SIGTERM, shutdown_future)
 
 
 @asyncio.coroutine
-def alter_file_system(loop, shutdown_future, caplog, tmpdir):
+def alter_file_system(shutdown_future, caplog, tmpdir):
     """Alter file system during different loop iterations to test watch_directory().
 
-    :param loop: AsyncIO event loop object.
     :param asyncio.Future shutdown_future: Shutdown signal.
     :param caplog: pytest extension fixture.
     :param tmpdir: pytest fixture.
     """
     # Wait for first pass to finish and second pass to skip run().
     while not any(True for r in caplog.records if r.message.startswith('watch_directory() no change in file system')):
-        yield from asyncio.sleep(0.1, loop=loop)
+        yield from asyncio.sleep(0.1)
 
     # Alter file system.
     before_count = len([True for r in caplog.records if r.message.startswith('watch_directory() file system changed')])
@@ -43,7 +41,7 @@ def alter_file_system(loop, shutdown_future, caplog, tmpdir):
         count = len([True for r in caplog.records if r.message.startswith('watch_directory() file system changed')])
         if count > before_count:
             break
-        yield from asyncio.sleep(0.1, loop=loop)
+        yield from asyncio.sleep(0.1)
 
     # Alter again in subdirectory by adding new file.
     before_count = len([True for r in caplog.records if r.message.startswith('watch_directory() file system changed')])
@@ -52,7 +50,7 @@ def alter_file_system(loop, shutdown_future, caplog, tmpdir):
         count = len([True for r in caplog.records if r.message.startswith('watch_directory() file system changed')])
         if count > before_count:
             break
-        yield from asyncio.sleep(0.1, loop=loop)
+        yield from asyncio.sleep(0.1)
 
     # Alter final time by removing file.
     before_count = len([True for r in caplog.records if r.message.startswith('watch_directory() file system changed')])
@@ -61,7 +59,7 @@ def alter_file_system(loop, shutdown_future, caplog, tmpdir):
         count = len([True for r in caplog.records if r.message.startswith('watch_directory() file system changed')])
         if count > before_count:
             break
-        yield from asyncio.sleep(0.1, loop=loop)
+        yield from asyncio.sleep(0.1)
 
     # Wait for no change iteration.
     before_count = len([True for r in caplog.records if r.message.startswith('watch_directory() no change in file sy')])
@@ -69,7 +67,7 @@ def alter_file_system(loop, shutdown_future, caplog, tmpdir):
         count = len([True for r in caplog.records if r.message.startswith('watch_directory() no change in file sy')])
         if count > before_count:
             break
-        yield from asyncio.sleep(0.1, loop=loop)
+        yield from asyncio.sleep(0.1)
 
     # End it.
     yield from shutdown(signal.SIGTERM, shutdown_future)
@@ -93,11 +91,11 @@ def test_periodically_convert(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setattr('flash_air_music.convert.run.GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr('flash_air_music.convert.transcode.GLOBAL_MUTABLE_CONFIG', config)
     loop = asyncio.get_event_loop()
-    semaphore = asyncio.Semaphore(0 if mode == 'locked' else 1, loop=loop)
+    semaphore = asyncio.Semaphore(0 if mode == 'locked' else 1)
     shutdown_future = asyncio.Future()
 
     loop.run_until_complete(asyncio.wait([
-        shutdown_after_string(loop, shutdown_future, caplog, 'periodically_convert() waking up.'),
+        shutdown_after_string(shutdown_future, caplog, 'periodically_convert() waking up.'),
         periodically_convert(loop, semaphore, shutdown_future),
     ], timeout=30))
 
@@ -124,13 +122,13 @@ def test_watch_directory(monkeypatch, tmpdir, caplog):
 
     monkeypatch.setattr('flash_air_music.convert.periodicals.EVERY_SECONDS_WATCH', 1)
     monkeypatch.setattr('flash_air_music.convert.periodicals.GLOBAL_MUTABLE_CONFIG', {'--music-source': str(tmpdir)})
-    monkeypatch.setattr('flash_air_music.convert.run.scan_wait', asyncio.coroutine(lambda _: (None, None, None)))
+    monkeypatch.setattr('flash_air_music.convert.run.scan_wait', asyncio.coroutine(lambda: (None, None, None)))
     loop = asyncio.get_event_loop()
     semaphore = asyncio.Semaphore()
     shutdown_future = asyncio.Future()
 
     nested_results = loop.run_until_complete(asyncio.wait([
-        alter_file_system(loop, shutdown_future, caplog, tmpdir),
+        alter_file_system(shutdown_future, caplog, tmpdir),
         watch_directory(loop, semaphore, shutdown_future),
     ], timeout=30))
 

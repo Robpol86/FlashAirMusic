@@ -12,10 +12,8 @@ CHANGE_WAIT = 0.5  # Seconds.
 
 
 @asyncio.coroutine
-def scan_wait(loop):
+def scan_wait():
     """Walk source directory for new songs and wait until they're done being written to if needed.
-
-    :param loop: AsyncIO event loop object.
 
     :return: 3 item tuple of lists: Song instances, files to delete, directories to remove.
     """
@@ -34,7 +32,7 @@ def scan_wait(loop):
 
     # Make sure files aren't still being written to.
     while songs:
-        yield from asyncio.sleep(CHANGE_WAIT, loop=loop)
+        yield from asyncio.sleep(CHANGE_WAIT)
         changed = [s for s in songs if s.changed]
         if not changed:
             break
@@ -87,7 +85,7 @@ def run(loop, semaphore, shutdown_future):
     log.debug('Waiting for semaphore...')
     with (yield from semaphore):
         log.debug('Got semaphore lock.')
-        songs, delete_files, remove_dirs = yield from scan_wait(loop)
+        songs, delete_files, remove_dirs = yield from scan_wait()
         if any([songs, delete_files, remove_dirs]):
             yield from convert_cleanup(loop, shutdown_future, songs, delete_files, remove_dirs)
     log.debug('Released lock.')

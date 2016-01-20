@@ -30,16 +30,15 @@ def write_to_file_slowly(caplog, path):
 
 
 @asyncio.coroutine
-def shutdown_after_start(loop, shutdown_future, caplog, signum):
+def shutdown_after_start(shutdown_future, caplog, signum):
     """Stop currently running conversions.
 
-    :param loop: AsyncIO event loop object.
     :param asyncio.Future shutdown_future: Shutdown signal.
     :param caplog: pytest extension fixture.
     :param int signum: Signal to simulate.
     """
     while not any(True for r in caplog.records if re.match(r'Process \d+ still running\.\.\.', r.message)):
-        yield from asyncio.sleep(0.1, loop=loop)
+        yield from asyncio.sleep(0.1)
     yield from shutdown(signum, shutdown_future)
 
 
@@ -62,11 +61,11 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
     loop = asyncio.get_event_loop()
     if mode == 'wait':
         nested_results = loop.run_until_complete(asyncio.wait([
-            write_to_file_slowly(caplog, str(source_file)), run.scan_wait(loop)
+            write_to_file_slowly(caplog, str(source_file)), run.scan_wait()
         ], timeout=30))
         songs, delete_files, remove_dirs = [s for s in nested_results[0] if s.result()][0].result()
     else:
-        songs, delete_files, remove_dirs = loop.run_until_complete(run.scan_wait(loop))
+        songs, delete_files, remove_dirs = loop.run_until_complete(run.scan_wait())
 
     # Verify.
     assert [s.source for s in songs] == ([] if mode == 'none' else [str(source_file)])
@@ -159,7 +158,7 @@ def test_run(monkeypatch, tmpdir, mode):
     monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', config)
     loop = asyncio.get_event_loop()
-    semaphore = asyncio.Semaphore(loop=loop)
+    semaphore = asyncio.Semaphore()
 
     if mode == 'nothing':
         loop.run_until_complete(run.run(loop, semaphore, asyncio.Future()))
@@ -206,11 +205,11 @@ def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
     monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', config)
     loop = asyncio.get_event_loop()
-    semaphore = asyncio.Semaphore(loop=loop)
+    semaphore = asyncio.Semaphore()
     shutdown_future = asyncio.Future()
 
     loop.run_until_complete(asyncio.wait([
-        shutdown_after_start(loop, shutdown_future, caplog, signum),
+        shutdown_after_start(shutdown_future, caplog, signum),
         run.run(loop, semaphore, shutdown_future),
     ], timeout=30))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]

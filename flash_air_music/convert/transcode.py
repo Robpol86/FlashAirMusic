@@ -17,9 +17,9 @@ TIMEOUT = 5 * 60  # Seconds.
 class Protocol(asyncio.SubprocessProtocol):
     """Handles process output."""
 
-    def __init__(self, loop):
+    def __init__(self):
         """Constructor."""
-        self.exit_future = asyncio.Future(loop=loop)
+        self.exit_future = asyncio.Future()
         self.stdout = bytearray()
         self.stderr = bytearray()
 
@@ -69,7 +69,7 @@ def convert_file(loop, shutdown_future, song):
 
     # Start process.
     log.info('Converting %s', song.name)
-    transport, protocol = yield from loop.subprocess_exec(lambda: Protocol(loop), *command, stdin=None)
+    transport, protocol = yield from loop.subprocess_exec(Protocol, *command, stdin=None)
     pid = transport.get_pid()
 
     # Wait for process to finish.
@@ -86,7 +86,7 @@ def convert_file(loop, shutdown_future, song):
             send_signal = timeout_signals.pop()
             log.warning('Timeout exceeded, sending signal %d to pid %d.', send_signal, pid)
             transport.send_signal(send_signal)
-        yield from asyncio.sleep(SLEEP_FOR, loop=loop)
+        yield from asyncio.sleep(SLEEP_FOR)
     yield from protocol.exit_future
 
     # Get results.
@@ -144,7 +144,7 @@ def convert_songs(loop, shutdown_future, songs):
     """
     log = logging.getLogger(__name__)
     workers = int(GLOBAL_MUTABLE_CONFIG['--threads']) or os.cpu_count()
-    conversion_semaphore = asyncio.Semaphore(workers, loop=loop)
+    conversion_semaphore = asyncio.Semaphore(workers)
 
     # Execute all.
     log.info('Beginning to convert %d file(s) up to %d at a time.', len(songs), workers)

@@ -29,7 +29,7 @@ def periodically_convert(loop, semaphore, shutdown_future):
             yield from run(loop, semaphore, shutdown_future)
         log.debug('periodically_convert() sleeping %d seconds.', EVERY_SECONDS_PERIODIC)
         for _ in range(EVERY_SECONDS_PERIODIC):
-            yield from asyncio.sleep(1, loop=loop)
+            yield from asyncio.sleep(1)
             if shutdown_future.done():
                 log.debug('periodically_convert() saw shutdown signal.')
                 return
@@ -63,7 +63,7 @@ def watch_directory(loop, semaphore, shutdown_future):
             log.debug('watch_directory() no change in file system, not calling run().')
         log.debug('watch_directory() sleeping %d seconds.', EVERY_SECONDS_WATCH)
         for _ in range(EVERY_SECONDS_WATCH):
-            yield from asyncio.sleep(EVERY_SECONDS_WATCH, loop=loop)
+            yield from asyncio.sleep(EVERY_SECONDS_WATCH)
             if shutdown_future.done():
                 log.debug('watch_directory() saw shutdown signal.')
                 return
