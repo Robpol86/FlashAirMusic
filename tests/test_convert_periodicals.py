@@ -10,22 +10,24 @@ from flash_air_music.convert.periodicals import periodically_convert, watch_dire
 
 
 @asyncio.coroutine
-def shutdown_after_string(shutdown_future, caplog, stop_after):
+def shutdown_after_string(loop, shutdown_future, caplog, stop_after):
     """Stop loop after `stop_after` is found in log records.
 
+    :param loop: AsyncIO event loop object.
     :param asyncio.Future shutdown_future: Shutdown signal.
     :param caplog: pytest extension fixture.
     :param str stop_after: String to watch for in caplog.records.
     """
     while not any(True for r in caplog.records if r.message == stop_after):
         yield from asyncio.sleep(0.1)
-    yield from shutdown(signal.SIGTERM, shutdown_future)
+    yield from shutdown(loop, signal.SIGTERM, shutdown_future)
 
 
 @asyncio.coroutine
-def alter_file_system(shutdown_future, caplog, tmpdir):
+def alter_file_system(loop, shutdown_future, caplog, tmpdir):
     """Alter file system during different loop iterations to test watch_directory().
 
+    :param loop: AsyncIO event loop object.
     :param asyncio.Future shutdown_future: Shutdown signal.
     :param caplog: pytest extension fixture.
     :param tmpdir: pytest fixture.
@@ -70,7 +72,7 @@ def alter_file_system(shutdown_future, caplog, tmpdir):
         yield from asyncio.sleep(0.1)
 
     # End it.
-    yield from shutdown(signal.SIGTERM, shutdown_future)
+    yield from shutdown(loop, signal.SIGTERM, shutdown_future)
 
 
 @pytest.mark.parametrize('mode', ['locked', 'normal'])
@@ -95,7 +97,7 @@ def test_periodically_convert(monkeypatch, tmpdir, caplog, mode):
     shutdown_future = asyncio.Future()
 
     loop.run_until_complete(asyncio.wait([
-        shutdown_after_string(shutdown_future, caplog, 'periodically_convert() waking up.'),
+        shutdown_after_string(loop, shutdown_future, caplog, 'periodically_convert() waking up.'),
         periodically_convert(loop, semaphore, shutdown_future),
     ], timeout=30))
 
@@ -128,7 +130,7 @@ def test_watch_directory(monkeypatch, tmpdir, caplog):
     shutdown_future = asyncio.Future()
 
     nested_results = loop.run_until_complete(asyncio.wait([
-        alter_file_system(shutdown_future, caplog, tmpdir),
+        alter_file_system(loop, shutdown_future, caplog, tmpdir),
         watch_directory(loop, semaphore, shutdown_future),
     ], timeout=30))
 

@@ -173,11 +173,10 @@ def initialize_config(doc, argv=None):
     log.debug('Read config file. Updated GLOBAL_MUTABLE_CONFIG.')
 
 
-def update_config(signum, _):
+def update_config(signum):
     """Read config data from config file on SIGHUP (1).
 
     :param int signum: Signal number provided by signal.signal().
-    :param _: Ignored frame.
     """
     log = logging.getLogger(__name__)
     log.info('Caught signal %d (%s). Reloading configuration.', signum, '/'.join(SIGNALS_INT_TO_NAME[signum]))

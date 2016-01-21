@@ -28,16 +28,17 @@ def write_to_file_slowly(caplog, path):
 
 
 @asyncio.coroutine
-def shutdown_after_start(shutdown_future, caplog, signum):
+def shutdown_after_start(loop, shutdown_future, caplog, signum):
     """Stop currently running conversions.
 
+    :param loop: AsyncIO event loop object.
     :param asyncio.Future shutdown_future: Shutdown signal.
     :param caplog: pytest extension fixture.
     :param int signum: Signal to simulate.
     """
     while not any(True for r in caplog.records if re.match(r'Process \d+ still running\.\.\.', r.message)):
         yield from asyncio.sleep(0.1)
-    yield from shutdown(signum, shutdown_future)
+    yield from shutdown(loop, signum, shutdown_future)
 
 
 @pytest.mark.parametrize('mode', ['none', 'static', 'wait'])
@@ -211,7 +212,7 @@ def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
     shutdown_future = asyncio.Future()
 
     loop.run_until_complete(asyncio.wait([
-        shutdown_after_start(shutdown_future, caplog, signum),
+        shutdown_after_start(loop, shutdown_future, caplog, signum),
         run.run(loop, semaphore, shutdown_future),
     ], timeout=30))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]

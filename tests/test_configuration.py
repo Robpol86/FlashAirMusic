@@ -350,7 +350,7 @@ def test_update_config(monkeypatch, tmpdir, caplog, mode):
 
     # Call.
     before = config.copy()
-    configuration.update_config(1, object())  # signal.signal() provides signum and frame object.
+    configuration.update_config(1)
 
     # Verify
     messages = [r.message for r in caplog.records]

@@ -26,50 +26,72 @@ import asyncio
 import logging
 import signal
 import sys
-import time
 
 from flash_air_music.configuration import initialize_config, SIGNALS_INT_TO_NAME, update_config
+from flash_air_music.convert.periodicals import EVERY_SECONDS_PERIODIC, periodically_convert, watch_directory
 from flash_air_music.exceptions import BaseError
 
 
 def main():
     """Main function."""
     log = logging.getLogger(__name__)
-    while True:
-        log.info('Doing nothing (info).')
-        log.debug('Doing nothing (debug).')
-        time.sleep(0.5)
+    loop = asyncio.get_event_loop()
+    semaphore = asyncio.Semaphore()
+    shutdown_future = asyncio.Future()
 
+    log.info('Scheduling signal handlers.')
+    loop.add_signal_handler(signal.SIGHUP, update_config, signal.SIGHUP)
+    loop.add_signal_handler(signal.SIGINT, loop.create_task, shutdown(loop, signal.SIGINT, shutdown_future, True))
+    loop.add_signal_handler(signal.SIGTERM, loop.create_task, shutdown(loop, signal.SIGTERM, shutdown_future, True))
 
-def shutdown_old(*_):
-    """Cleanup and shut down the program.
+    log.info('Scheduling periodic tasks.')
+    loop.call_later(EVERY_SECONDS_PERIODIC, loop.create_task, periodically_convert(loop, semaphore, shutdown_future))
+    loop.create_task(watch_directory(loop, semaphore, shutdown_future))
 
-    :param _: Ignored.
-    """
-    log = logging.getLogger(__name__)
-    log.info('Shutting down.')
-    sys.exit(0)
+    log.info('Running main loop.')
+    loop.run_forever()
+    log.info('Main loop has exited.')
 
 
 @asyncio.coroutine
-def shutdown(signum, shutdown_future):
+def shutdown(loop, signum, shutdown_future, stop_loop=False):
     """Cleanup and shut down the program.
 
+    :param loop: AsyncIO event loop object.
     :param int signum: Signal caught.
     :param asyncio.Future shutdown_future: Signals process shutdown to periodic coroutines.
+    :param bool stop_loop: Stop the event loop after tasks complete or 5 seconds pass.
     """
     log = logging.getLogger(__name__)
     log.info('Caught signal %d (%s). Shutting down.', signum, '/'.join(SIGNALS_INT_TO_NAME[signum]))
     shutdown_future.set_result(signum)
+    if stop_loop:
+        loop.create_task(stop(loop))
+
+
+@asyncio.coroutine
+def stop(loop):
+    """Wait up to 5 seconds for tasks to cleanup before stopping event loop.
+
+    :param loop: AsyncIO event loop object.
+    """
+    log = logging.getLogger(__name__)
+    log.info('Waiting up to 5 seconds for tasks to cleanup.')
+
+    this_task = asyncio.Task.current_task()
+    for _ in range(50):
+        yield from asyncio.sleep(0.1)
+        running_tasks = [t for t in asyncio.Task.all_tasks() if not t.done() and t != this_task]
+        if not running_tasks:
+            break
+    log.info('Stopping loop.')
+    loop.stop()
 
 
 def entry_point():
     """Entry-point from setuptools."""
-    signal.signal(signal.SIGINT, shutdown_old)
-    signal.signal(signal.SIGTERM, shutdown_old)
     try:
         initialize_config(doc=__doc__)
-        signal.signal(signal.SIGHUP, update_config)
         main()
     except BaseError:
         logging.critical('Failure.')
