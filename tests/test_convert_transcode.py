@@ -6,14 +6,12 @@ import re
 import signal
 from textwrap import dedent
 
-import py
 import pytest
 
 from flash_air_music.configuration import DEFAULT_FFMPEG_BINARY
 from flash_air_music.convert import transcode
 from flash_air_music.convert.discover import get_songs, Song
-
-HERE = py.path.local(__file__).dirpath()
+from tests import HERE
 
 
 @pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))

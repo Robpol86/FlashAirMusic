@@ -5,14 +5,12 @@ import re
 import signal
 from textwrap import dedent
 
-import py
 import pytest
 
 from flash_air_music.__main__ import shutdown
 from flash_air_music.configuration import CONVERTED_MUSIC_SUBDIR, DEFAULT_FFMPEG_BINARY
 from flash_air_music.convert import discover, run, transcode
-
-HERE = py.path.local(__file__).dirpath()
+from tests import HERE
 
 
 @asyncio.coroutine

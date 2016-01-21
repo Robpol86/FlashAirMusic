@@ -4,13 +4,11 @@ import json
 import os
 import time
 
-import py
 import pytest
 from mutagen.id3 import COMM, ID3
 
 from flash_air_music.convert import discover, id3_flac_tags
-
-HERE = py.path.local(__file__).dirpath()
+from tests import HERE
 
 
 @pytest.mark.parametrize('mode', ['no target', 'no prev metadata', 'st', 'ss', 'tt', 'ts', 'up to date'])

@@ -2,15 +2,13 @@
 
 import json
 
-import py
 import pytest
 from mutagen.id3 import COMM, ID3
 
 from flash_air_music.convert import id3_flac_tags
 from flash_air_music.convert.discover import Song
 from flash_air_music.exceptions import CorruptedTargetFile
-
-HERE = py.path.local(__file__).dirpath()
+from tests import HERE
 
 
 @pytest.mark.parametrize('mode', ['dne', 'empty', 'corrupted', 'no comment', 'bad comment', 'partial', 'good'])
