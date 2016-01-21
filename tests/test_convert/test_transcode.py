@@ -3,6 +3,7 @@
 import asyncio
 import itertools
 import re
+import signal
 from textwrap import dedent
 
 import py
@@ -141,29 +142,36 @@ def test_convert_file_deadlock(monkeypatch, tmpdir, caplog):
     assert any(m.endswith('test_stderr10240') for m in messages)
 
 
-@pytest.mark.parametrize('exit_signal', ['SIGINT', 'SIGTERM', 'SIGKILL'])
+@pytest.mark.parametrize('exit_signal', [signal.SIGINT, signal.SIGTERM, signal.SIGKILL])
 def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
     """Test convert_file() with a stalled process.
 
     :param monkeypatch: pytest fixture.
     :param tmpdir: pytest fixture.
     :param caplog: pytest extension fixture.
-    :param str exit_signal: Script exits on this signal.
+    :param int exit_signal: Script exits on this signal.
     """
     ffmpeg = tmpdir.join('ffmpeg')
     ffmpeg.write(dedent("""\
-    #!/bin/bash
-    trap "echo Ignoring SIGINT." SIGINT
-    trap "echo Ignoring SIGTERM." SIGTERM
-    [ -n "$EXIT_SIGNAL" ] && trap "{ echo Catching $EXIT_SIGNAL; exit 2; }" $EXIT_SIGNAL
-    for i in {1..10}; do echo $i; sleep 0.1; done
-    exit 1
+    #!/usr/bin/env python
+    import os, signal, sys, time
+    def exit(signum, _):
+        if int(os.environ['EXIT_SIGNAL']) == signum:
+            print('Catching {}'.format(os.environ['EXIT_SIGNAL']))
+            sys.exit(2)
+        print('Ignoring {}'.format(signum))
+    signal.signal(signal.SIGINT, exit)
+    signal.signal(signal.SIGTERM, exit)
+    for i in range(10):
+        print(i)
+        time.sleep(1)
+    sys.exit(1)
     """))
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg)})
     monkeypatch.setattr(transcode, 'SLEEP_FOR', 0.1)
     monkeypatch.setattr(transcode, 'TIMEOUT', 0.5)
-    monkeypatch.setenv('EXIT_SIGNAL', exit_signal)
+    monkeypatch.setenv('EXIT_SIGNAL', str(exit_signal))
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
@@ -175,7 +183,7 @@ def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify.
-    assert exit_status == 2 if exit_signal != 'SIGKILL' else -1
+    assert exit_status == (2 if exit_signal != signal.SIGKILL else -9)
     assert 'Converting song1.mp3' in messages
     assert 'Storing metadata in song1.mp3' not in messages
     assert any(re.match(r'^Process \d+ exited {}$'.format(exit_status), m) for m in messages)
@@ -184,9 +192,9 @@ def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
     # Verify based on exit_signal.
     sent_signals = [m for m in messages if m.startswith('Timeout exceeded')]
     assert sent_signals[0].startswith('Timeout exceeded, sending signal 2')
-    if exit_signal in ('SIGTERM', 'SIGKILL'):
+    if exit_signal in (signal.SIGTERM, signal.SIGKILL):
         assert sent_signals[1].startswith('Timeout exceeded, sending signal 15')
-    if exit_signal == 'SIGKILL':
+    if exit_signal == signal.SIGKILL:
         assert sent_signals[2].startswith('Timeout exceeded, sending signal 9')
 
 

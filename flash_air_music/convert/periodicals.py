@@ -63,7 +63,7 @@ def watch_directory(loop, semaphore, shutdown_future):
             log.debug('watch_directory() no change in file system, not calling run().')
         log.debug('watch_directory() sleeping %d seconds.', EVERY_SECONDS_WATCH)
         for _ in range(EVERY_SECONDS_WATCH):
-            yield from asyncio.sleep(EVERY_SECONDS_WATCH)
+            yield from asyncio.sleep(1)
             if shutdown_future.done():
                 log.debug('watch_directory() saw shutdown signal.')
                 return

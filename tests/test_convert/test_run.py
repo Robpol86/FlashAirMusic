@@ -187,8 +187,12 @@ def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
     ffmpeg.write(dedent("""\
     #!/usr/bin/env python
     import signal, sys, time
-    time.sleep(10)
-    sys.exit(3)
+    signal.signal(signal.SIGINT, lambda n, _: sys.exit(n))
+    signal.signal(signal.SIGTERM, lambda n, _: sys.exit(n))
+    for i in range(10):
+        print(i)
+        time.sleep(1)
+    sys.exit(1)
     """))
     ffmpeg.chmod(0o0755)
     source_dir = tmpdir.ensure_dir('source')
@@ -215,7 +219,6 @@ def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     assert [i for i in messages if i.startswith('Caught signal {}'.format(signum))]
-    killed = [i for i in messages
-              if re.match(r'Process \d+ exited {}'.format(1 if signum == signal.SIGINT else -signal.SIGTERM), i)]
+    killed = [i for i in messages if re.match(r'Process \d+ exited {}'.format(signum), i)]
     skipped = [i for i in messages if i == 'Skipping due to shutdown_future signal.']
     assert len(killed) + len(skipped) == 10
