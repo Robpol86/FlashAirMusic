@@ -1,6 +1,7 @@
 """Convert files from one format to mp3, keeping metadata."""
 
 import asyncio
+import itertools
 import logging
 import os
 import signal
@@ -39,6 +40,17 @@ class Protocol(asyncio.SubprocessProtocol):
         self.exit_future.set_result(True)
 
 
+def timeout_signals_generator():
+    """Yield SIGINT, then SIGTERM, then infinitely SIGKILL.
+
+    :return: Signal integers.
+    :rtype: iter
+    """
+    yield signal.SIGINT
+    yield signal.SIGTERM
+    yield from itertools.repeat(signal.SIGKILL)
+
+
 @asyncio.coroutine
 def convert_file(loop, shutdown_future, song):
     """Convert one file to mp3. Store metadata in ID3 comment tag.
@@ -55,7 +67,7 @@ def convert_file(loop, shutdown_future, song):
         log.debug('Skipping due to shutdown_future signal.')
         raise ShuttingDown
     start_time = time.time()
-    timeout_signals = [signal.SIGKILL, signal.SIGTERM, signal.SIGINT]  # reverse order.
+    timeout_signals = timeout_signals_generator()
     command = [
         GLOBAL_MUTABLE_CONFIG['--ffmpeg-bin'],
         '-i', song.source,
@@ -77,13 +89,13 @@ def convert_file(loop, shutdown_future, song):
     while not protocol.exit_future.done():
         log.debug('Process %d still running...', pid)
         if shutdown_future.done():
-            send_signal = timeout_signals.pop()
+            send_signal = next(timeout_signals)
             if send_signal == signal.SIGINT and shutdown_future.result() != signal.SIGINT:
-                send_signal = timeout_signals.pop()  # Start with SIGTERM instead.
+                send_signal = next(timeout_signals)  # Start with SIGTERM instead.
             log.info('Service shutdown initiated, sending %s to %d', '/'.join(SIGNALS_INT_TO_NAME[send_signal]), pid)
             transport.send_signal(send_signal)
         elif time.time() - start_time > TIMEOUT and timeout_signals:
-            send_signal = timeout_signals.pop()
+            send_signal = next(timeout_signals)
             log.warning('Timeout exceeded, sending signal %d to pid %d.', send_signal, pid)
             transport.send_signal(send_signal)
         yield from asyncio.sleep(SLEEP_FOR)

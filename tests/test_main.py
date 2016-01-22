@@ -34,6 +34,7 @@ def test_error(tmpdir):
     stdout = exc.value.output.decode('utf-8')
     assert 'Working directory converted music subdir cannot be in music source dir.' in stdout
     assert 'Failure.' in stdout
+    assert 'BUG!' not in stdout
 
 
 @pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
@@ -90,6 +91,7 @@ def test_sighup(tmpdir):
     assert 'ERROR' not in log
     for line in log.splitlines():
         assert line in stdout
+    assert 'BUG!' not in stdout
 
 
 @pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
@@ -132,6 +134,7 @@ def test_empty(tmpdir):
     assert 'Main loop has exited.' in stdout
     assert 'Traceback' not in stdout
     assert 'ERROR' not in stdout
+    assert 'BUG!' not in stdout
     assert process.poll() == 0
 
 
@@ -178,6 +181,7 @@ def test_songs(tmpdir):
     assert 'Main loop has exited.' in stdout
     assert 'Traceback' not in stdout
     assert 'ERROR' not in stdout
+    assert 'BUG!' not in stdout
     assert process.poll() == 0
     assert tmpdir.join('working', CONVERTED_MUSIC_SUBDIR, 'song1.mp3').check(file=True)
     assert tmpdir.join('working', CONVERTED_MUSIC_SUBDIR, 'song2.mp3').check(file=True)
@@ -247,3 +251,81 @@ def test_interrupt_ffmpeg(monkeypatch, tmpdir, signum):
     assert 'Stopping loop.' in stdout
     assert 'Main loop has exited.' in stdout
     assert 'Traceback' not in stdout
+    assert 'BUG!' not in stdout
+    assert process.poll() == 0
+
+
+def test_bug_hangs(monkeypatch, tmpdir):
+    """Make sure program times out and exits even with pending tasks.
+
+    :param monkeypatch: pytest fixture.
+    :param tmpdir: pytest fixture.
+    """
+    config_file = tmpdir.join('config.yaml')
+    config_file.write(dedent("""\
+    music-source: {}
+    threads: 3
+    verbose: True
+    working-dir: {}
+    """).format(tmpdir.ensure_dir('source'), tmpdir.ensure_dir('working')))
+
+    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song1.mp3'))
+    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song2.mp3'))
+    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song3.mp3'))
+
+    ffmpeg = tmpdir.ensure_dir('bin').join('ffmpeg')
+    ffmpeg.write(dedent("""\
+    #!/usr/bin/env python
+    import signal, sys, time
+    signal.signal(signal.SIGTERM, lambda *_: None)
+    for i in range(30):
+        print(i)
+        time.sleep(1)
+    sys.exit(1)
+    """))
+    ffmpeg.chmod(0o0755)
+    monkeypatch.setenv('PATH', '{}:{}'.format(ffmpeg.dirname, os.environ['PATH']))
+
+    intercept = tmpdir.join('intercept.py')
+    intercept.write(dedent("""\
+    #!/usr/bin/env python
+    import signal
+    from flash_air_music.__main__ import entry_point
+    signal.SIGKILL = signal.SIGTERM
+    entry_point()
+    """))
+    intercept.chmod(0o0755)
+
+    # Run.
+    command = [str(intercept), 'run', '--config', str(config_file)]
+    stdout_file = tmpdir.join('stdout.log')
+    process = subprocess.Popen(command, stderr=subprocess.STDOUT, stdout=stdout_file.open('w'))
+    for _ in range(100):
+        if 'still running...' in stdout_file.read() or process.poll() is not None:
+            break
+        time.sleep(0.1)
+
+    # Stop.
+    if process.poll() is None:
+        process.send_signal(signal.SIGTERM)
+        for _ in range(100):
+            if process.poll() is not None:
+                break
+            time.sleep(0.1)
+
+    # Verify.
+    stdout = stdout_file.read()
+    print(stdout, file=sys.stderr)
+    assert 'Found: 3 new source songs, 0 orphaned target songs, 0 empty directories.' in stdout
+    assert 'Beginning to convert 3 file(s) up to 3 at a time.' in stdout
+    assert 'Failed to convert song1.mp3!' not in stdout
+    assert 'Failed to convert song2.mp3!' not in stdout
+    assert 'Failed to convert song3.mp3!' not in stdout
+    assert 'Done converting 3 file(s)' not in stdout
+    assert 'Stopping loop.' in stdout
+    assert 'Main loop has exited.' in stdout
+    assert 'Task was destroyed but it is pending!' in stdout
+    assert 'task: <Task pending coro=<watch_directory() running at' in stdout
+    assert 'Traceback' in stdout
+    assert 'BUG!' not in stdout
+    assert process.poll() == 0
