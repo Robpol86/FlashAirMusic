@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 
+import codecs
 import os
 
 from setuptools import find_packages, setup
@@ -15,11 +16,14 @@ def readme():
     :rtype: str
     """
     path = os.path.realpath(os.path.join(os.path.dirname(__file__), 'README.rst'))
+    handle = None
     try:
-        with open(path, encoding='utf-8') as handle:
-            return handle.read(131072)
+        handle = codecs.open(path, encoding='utf-8')
+        return handle.read(131072)
     except IOError:
         return ''
+    finally:
+        getattr(handle, 'close', lambda: None)()
 
 
 setup(

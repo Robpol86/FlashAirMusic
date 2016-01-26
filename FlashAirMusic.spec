@@ -19,8 +19,9 @@ Summary:            %{getenv:SUMMARY}
 URL:                %{getenv:URL}
 Version:            %{getenv:VERSION}
 
-%global daemon_group %{lua: print(rpm.expand('%{name}'):gsub('([^\n])(%u)', '%1_%2'):lower()) }
-%global daemon_user %{daemon_group}
+%global base_module %{lua: print(rpm.expand('%{name}'):gsub('([^\n])(%u)', '%1_%2'):lower()) }
+%global daemon_group %{base_module}
+%global daemon_user %{base_module}
 
 %description
 %{lua:
