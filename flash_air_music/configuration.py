@@ -4,13 +4,10 @@ import logging
 import os
 import re
 import signal
-import sys
 from distutils.spawn import find_executable
 
 import pkg_resources
-from docopt import docopt
-from yaml import safe_load
-from yaml.reader import ReaderError
+from docoptcfg import docoptcfg, DocoptcfgFileError
 
 from flash_air_music.exceptions import ConfigError
 from flash_air_music.setup_logging import setup_logging
@@ -24,11 +21,10 @@ GLOBAL_MUTABLE_CONFIG = dict()
 REGEX_MAC_ADDR = re.compile(r'^(?:[a-fA-F0-9]{2}[ :-]?){5}[a-fA-F0-9]{2}$')
 
 
-def _get_arguments(doc, argv=None):
+def _get_arguments(doc):
     """Get command line arguments.
 
     :param str doc: Docstring to pass to docopt.
-    :param list argv: Command line argument list to process. For testing.
 
     :return: Parsed options.
     :rtype: dict
@@ -36,58 +32,16 @@ def _get_arguments(doc, argv=None):
     require = getattr(pkg_resources, 'require')  # Stupid linting error.
     project = [p for p in require('FlashAirMusic') if p.project_name == 'FlashAirMusic'][0]
     version = project.version
-    return docopt(doc, argv=argv or sys.argv[1:], version=version)
+    return docoptcfg(doc, config_option='--config', env_prefix='FAM_', version=version)
 
 
-def _read_config_file(path):
-    """Read configuration file. Mimics docopt key names.
-
-    :raise flash_air_music.exceptions.ConfigError: On any error when attempting to read config file.
-
-    :param path: File path to YAML file.
-
-    :return: Docopt-compatible configuration data.
-    :rtype: dict
-    """
-    log = logging.getLogger(__name__)
-    try:
-        with open(path) as handle:
-            data = dict(safe_load(handle))
-    except (FileNotFoundError, PermissionError) as exc:
-        log.error('Unable to read config file %s: %s', path, exc.strerror)
-        raise ConfigError
-    except ReaderError as exc:
-        log.error('Unable to parse %s, not valid YAML: %s', path, exc.reason)
-        raise ConfigError
-    except (TypeError, ValueError) as exc:
-        log.error('Unable to parse %s, not a dictionary: %s', path, exc.args[0])
-        raise ConfigError
-
-    # Parse config.
-    config = dict()
-    for key in ('--log', '--mac-addr', '--music-source', '--working-dir', '--ffmpeg-bin', '--threads'):
-        if key[2:] in data:
-            value = data[key[2:]]
-            config[key] = str(value) if value is not None else None
-    for key in ('--quiet', '--verbose'):
-        if key[2:] in data:
-            config[key] = bool(data[key[2:]])
-
-    return config
-
-
-def _validate_config(config, file_config=None):  # pylint:disable=too-many-branches
+def _validate_config(config):  # pylint:disable=too-many-branches
     """Validate config data.
 
     :raise flash_air_music.exceptions.ConfigError: On invalid data.
 
     :param dict config: Configuration dict to validate.
-    :param dict file_config: Second configuration dict, usually from a config file.
     """
-    if file_config:
-        config = config.copy()
-        config.update(file_config)
-
     # --log
     if config['--log']:
         parent = os.path.dirname(config['--log']) or os.getcwd()
@@ -148,34 +102,44 @@ def _validate_config(config, file_config=None):  # pylint:disable=too-many-branc
         raise ConfigError
 
 
-def initialize_config(doc, argv=None):
+def initialize_config(doc):
     """Called during initial startup. Read config data from command line and optionally a config file.
 
-    :param str doc: Docstring to pass to docopt.
-    :param argv: Command line argument list to process. For testing.
+    :raise flash_air_music.exceptions.ConfigError: On invalid data.
+
+    :param str doc: Docstring to pass to docoptcfg.
     """
-    GLOBAL_MUTABLE_CONFIG.update(_get_arguments(doc, argv))
+    try:
+        GLOBAL_MUTABLE_CONFIG.update(_get_arguments(doc))
+    except DocoptcfgFileError as exc:
+        logging.getLogger(__name__).error('Config file specified but invalid: %s', exc.message)
+        raise ConfigError
+
+    # Set defaults.
     if not GLOBAL_MUTABLE_CONFIG['--ffmpeg-bin']:
         GLOBAL_MUTABLE_CONFIG['--ffmpeg-bin'] = DEFAULT_FFMPEG_BINARY
     if not GLOBAL_MUTABLE_CONFIG['--working-dir']:
         GLOBAL_MUTABLE_CONFIG['--working-dir'] = DEFAULT_WORKING_DIR
-    if GLOBAL_MUTABLE_CONFIG['--config']:
-        file_config = _read_config_file(GLOBAL_MUTABLE_CONFIG['--config'])
-        if file_config:
-            GLOBAL_MUTABLE_CONFIG.update(file_config)
+
+    # Validate.
     _validate_config(GLOBAL_MUTABLE_CONFIG)
+
+    # Create destination directory.
     try:
         os.mkdir(os.path.realpath(os.path.join(GLOBAL_MUTABLE_CONFIG['--working-dir'], CONVERTED_MUSIC_SUBDIR)))
     except FileExistsError:
         pass
+
+    # Setup logging.
     setup_logging(GLOBAL_MUTABLE_CONFIG)
     log = logging.getLogger(__name__)
-    log.debug('Read config file. Updated GLOBAL_MUTABLE_CONFIG.')
+    log.debug('Updated GLOBAL_MUTABLE_CONFIG.')
 
 
-def update_config(signum):
+def update_config(doc, signum):
     """Read config data from config file on SIGHUP (1).
 
+    :param str doc: Docstring to pass to docoptcfg.
     :param int signum: Signal number provided by signal.signal().
     """
     log = logging.getLogger(__name__)
@@ -184,21 +148,34 @@ def update_config(signum):
         log.warning('No previously defined configuration file. Nothing to read.')
         return
 
-    # Read config. Validate before merging into global config.
+    # Read config.
     try:
-        file_config = _read_config_file(GLOBAL_MUTABLE_CONFIG['--config'])
-        if file_config:
-            _validate_config(GLOBAL_MUTABLE_CONFIG, file_config)
-        else:
-            log.warning('Config file %s empty.', GLOBAL_MUTABLE_CONFIG['--config'])
-            return
+        config = _get_arguments(doc)
+    except DocoptcfgFileError as exc:
+        logging.getLogger(__name__).error('Config file specified but invalid: %s', exc.message)
+        return
+
+    # Set defaults.
+    if not config['--ffmpeg-bin']:
+        config['--ffmpeg-bin'] = DEFAULT_FFMPEG_BINARY
+    if not config['--working-dir']:
+        config['--working-dir'] = DEFAULT_WORKING_DIR
+
+    # Validate.
+    try:
+        _validate_config(config)
     except ConfigError:
         return
-    GLOBAL_MUTABLE_CONFIG.update(file_config)
+
+    # Update.
+    GLOBAL_MUTABLE_CONFIG.update(config)
+
+    # Create destination directory.
     try:
         os.mkdir(os.path.realpath(os.path.join(GLOBAL_MUTABLE_CONFIG['--working-dir'], CONVERTED_MUSIC_SUBDIR)))
     except FileExistsError:
         pass
-    setup_logging(GLOBAL_MUTABLE_CONFIG)
 
+    # Re-setup logging.
+    setup_logging(GLOBAL_MUTABLE_CONFIG)
     log.info('Done reloading configuration.')

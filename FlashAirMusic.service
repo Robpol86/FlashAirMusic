@@ -4,8 +4,9 @@ Documentation=file:///usr/share/doc/FlashAirMusic/README.rst
 After=network.target
 
 [Service]
+Environment="FAM_CONFIG=/etc/FlashAirMusic/FlashAirMusic.ini"
 ExecReload=/bin/kill -HUP $MAINPID
-ExecStart=/usr/bin/FlashAirMusic run -c /etc/FlashAirMusic/FlashAirMusic.yaml
+ExecStart=/usr/bin/FlashAirMusic run
 Group=flash_air_music
 StandardError=syslog
 StandardOutput=syslog

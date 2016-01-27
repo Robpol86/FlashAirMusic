@@ -8,7 +8,7 @@ Usage:
     FlashAirMusic -V | --version
 
 Options:
-    -c FILE --config=FILE       Path YAML config file.
+    -c FILE --config=FILE       Path to INI config file.
     -f FILE --ffmpeg-bin=FILE   File path to ffmpeg binary.
     -h --help                   Show this screen.
     -l FILE --log=FILE          Log to file. Will be rotated daily.
@@ -40,7 +40,7 @@ def main():
     shutdown_future = asyncio.Future()
 
     log.info('Scheduling signal handlers.')
-    loop.add_signal_handler(signal.SIGHUP, update_config, signal.SIGHUP)
+    loop.add_signal_handler(signal.SIGHUP, update_config, __doc__, signal.SIGHUP)
     loop.add_signal_handler(signal.SIGINT, loop.create_task, shutdown(loop, signal.SIGINT, shutdown_future, True))
     loop.add_signal_handler(signal.SIGTERM, loop.create_task, shutdown(loop, signal.SIGTERM, shutdown_future, True))
 
@@ -91,7 +91,7 @@ def stop(loop):
 def entry_point():
     """Entry-point from setuptools."""
     try:
-        initialize_config(doc=__doc__)
+        initialize_config(__doc__)
         main()
     except BaseError:
         logging.critical('Failure.')

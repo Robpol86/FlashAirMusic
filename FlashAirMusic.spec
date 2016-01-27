@@ -12,9 +12,9 @@ Requires(preun):    systemd
 Requires:           ffmpeg
 Requires:           python3-docopt
 Requires:           python3-mutagen
-Requires:           python3-PyYAML
 Requires:           python3-requests
 Source0:            %{name}-%{version}.tar.gz
+Source1:            https://raw.githubusercontent.com/Robpol86/docoptcfg/v1.0.1/docoptcfg.py
 Summary:            %{getenv:SUMMARY}
 URL:                %{getenv:URL}
 Version:            %{getenv:VERSION}
@@ -43,9 +43,11 @@ Version:            %{getenv:VERSION}
 %{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/%{name}
 %{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/logrotate.d
 %{__install} -d -m 0755 %{buildroot}%{_unitdir}
+%{__install} -d -m 0755 %{buildroot}%{python3_sitelib}/%{base_module}/3rdparty
 %{__install} -m 0644 %{name}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 %{__install} -m 0644 %{name}.service %{buildroot}%{_unitdir}/
-%{__install} -m 0644 %{name}.yaml %{buildroot}%{_sysconfdir}/%{name}/
+%{__install} -m 0644 %{name}.ini %{buildroot}%{_sysconfdir}/%{name}/
+%{__install} -m 0644 %{SOURCE1} %{buildroot}%{python3_sitelib}/%{base_module}/3rdparty/%{basename:%{SOURCE1}}
 
 %pre
 getent group %{daemon_group} >/dev/null || groupadd -r %{daemon_group}
@@ -63,7 +65,7 @@ exit 0
 %systemd_postun_with_restart %{name}.service
 
 %files
-%config(noreplace) %attr(-, root, %{daemon_group}) %{_sysconfdir}/%{name}/%{name}.yaml
+%config(noreplace) %attr(-, root, %{daemon_group}) %{_sysconfdir}/%{name}/%{name}.ini
 %config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
 %dir %attr(-, %{daemon_user}, %{daemon_group}) %{_localstatedir}/log/%{name}
 %doc README.rst

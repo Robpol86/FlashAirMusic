@@ -20,11 +20,12 @@ def test_error(tmpdir):
 
     :param tmpdir: pytest fixture.
     """
-    config_file = tmpdir.join('config.yaml')
+    config_file = tmpdir.join('config.ini')
     config_file.write(dedent("""\
-    music-source: {0}
-    verbose: True
-    working-dir: {0}
+    [FlashAirMusic]
+    music-source = {0}
+    verbose = true
+    working-dir = {0}
     """).format(tmpdir))
     command = [find_executable('FlashAirMusic'), 'run', '--config', str(config_file)]
     assert os.path.isfile(command[0])
@@ -43,11 +44,12 @@ def test_sighup(tmpdir):
 
     :param tmpdir: pytest fixture.
     """
-    config_file = tmpdir.join('config.yaml')
+    config_file = tmpdir.join('config.ini')
     config_file.write(dedent("""\
-    music-source: {}
-    verbose: True
-    working-dir: {}
+    [FlashAirMusic]
+    music-source = {}
+    verbose = true
+    working-dir = {}
     """).format(tmpdir.ensure_dir('source'), tmpdir.ensure_dir('working')))
     command = [find_executable('FlashAirMusic'), 'run', '--config', str(config_file)]
 
@@ -62,7 +64,7 @@ def test_sighup(tmpdir):
     # Update config.
     log_file = tmpdir.join('log.log')
     if process.poll() is None:
-        config_file.write('log: {}'.format(log_file))
+        config_file.write('log = {}'.format(log_file), mode='a')
         process.send_signal(signal.SIGHUP)
         for _ in range(100):
             if 'Done reloading configuration.' in stdout_file.read() or process.poll() is not None:
@@ -81,7 +83,6 @@ def test_sighup(tmpdir):
     log = log_file.read()
     print(log, file=sys.stderr)
     assert 'Configured logging.' in stdout
-    assert 'Read config file. Updated GLOBAL_MUTABLE_CONFIG.' in stdout
     assert re.search(r'Caught signal 1 \([\w/_]+\)\. Reloading configuration\.', stdout)
     assert 'Done reloading configuration.' in stdout
     assert 'Done reloading configuration.' in log
@@ -100,11 +101,12 @@ def test_empty(tmpdir):
 
     :param tmpdir: pytest fixture.
     """
-    config_file = tmpdir.join('config.yaml')
+    config_file = tmpdir.join('config.ini')
     config_file.write(dedent("""\
-    music-source: {}
-    verbose: True
-    working-dir: {}
+    [FlashAirMusic]
+    music-source = {}
+    verbose = true
+    working-dir = {}
     """).format(tmpdir.ensure_dir('source'), tmpdir.ensure_dir('working')))
     command = [find_executable('FlashAirMusic'), 'run', '--config', str(config_file)]
 
@@ -144,11 +146,12 @@ def test_songs(tmpdir):
 
     :param tmpdir: pytest fixture.
     """
-    config_file = tmpdir.join('config.yaml')
+    config_file = tmpdir.join('config.ini')
     config_file.write(dedent("""\
-    music-source: {}
-    verbose: False
-    working-dir: {}
+    [FlashAirMusic]
+    music-source = {}
+    verbose = false
+    working-dir = {}
     """).format(tmpdir.ensure_dir('source'), tmpdir.ensure_dir('working')))
     command = [find_executable('FlashAirMusic'), 'run', '--config', str(config_file)]
 
@@ -196,12 +199,13 @@ def test_interrupt_ffmpeg(monkeypatch, tmpdir, signum):
     :param tmpdir: pytest fixture.
     :param int signum: Terminating signal to send.
     """
-    config_file = tmpdir.join('config.yaml')
+    config_file = tmpdir.join('config.ini')
     config_file.write(dedent("""\
-    music-source: {}
-    threads: 3
-    verbose: True
-    working-dir: {}
+    [FlashAirMusic]
+    music-source = {}
+    threads = 3
+    verbose = true
+    working-dir = {}
     """).format(tmpdir.ensure_dir('source'), tmpdir.ensure_dir('working')))
     command = [find_executable('FlashAirMusic'), 'run', '--config', str(config_file)]
 
@@ -261,12 +265,13 @@ def test_bug_hangs(monkeypatch, tmpdir):
     :param monkeypatch: pytest fixture.
     :param tmpdir: pytest fixture.
     """
-    config_file = tmpdir.join('config.yaml')
+    config_file = tmpdir.join('config.ini')
     config_file.write(dedent("""\
-    music-source: {}
-    threads: 3
-    verbose: True
-    working-dir: {}
+    [FlashAirMusic]
+    music-source = {}
+    threads = 3
+    verbose = true
+    working-dir = {}
     """).format(tmpdir.ensure_dir('source'), tmpdir.ensure_dir('working')))
 
     HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song1.mp3'))

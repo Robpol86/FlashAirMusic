@@ -1,6 +1,0 @@
-# Sample configuration file for the FlashAirMusic service.
-log: /var/log/FlashAirMusic/FlashAirMusic.log
-mac-addr: 00:00:00:00:00:00
-music-source: ~/music_source
-quiet: True
-working-dir: ~/working_dir

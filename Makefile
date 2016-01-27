@@ -18,6 +18,7 @@ sdist:
 
 rpm:
 	cp $(NAME).spec $(HOME)/rpmbuild/SPECS/
+	spectool -g $(NAME).spec -C $(HOME)/rpmbuild/SOURCES
 	rpmbuild -ba $(NAME).spec
 	mv $(HOME)/rpmbuild/RPMS/*/$(NAME)-$(VERSION)-*.rpm .
 
