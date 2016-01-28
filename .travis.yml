@@ -22,7 +22,7 @@ matrix:
 
   - env: MODE=fedora:23
     services: [docker]
-    install: make docker-build-images
-    script: make docker-run-both
+    install: make docker-build-image
+    script: make docker-run-all
 
 sudo: required

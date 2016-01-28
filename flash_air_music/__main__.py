@@ -50,6 +50,7 @@ def main():
 
     log.info('Running main loop.')
     loop.run_forever()
+    loop.close()
     log.info('Main loop has exited.')
 
 

@@ -8,4 +8,8 @@ WORKDIR /build
 
 ENV NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
 ADD ["$NAME.spec", "README.rst", "/build/"]
-RUN dnf builddep -y --spec $NAME.spec && rm $NAME.spec README.rst
+
+RUN dnf builddep -y --spec $NAME.spec
+RUN dnf install -y \
+    http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-23.noarch.rpm \
+    http://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-23.noarch.rpm

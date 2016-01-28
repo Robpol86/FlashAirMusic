@@ -27,6 +27,7 @@ install:
 	dnf -y install $(NAME)-$(VERSION)-*.rpm
 
 docker-rpmtest: install
+	systemd-analyze verify $(NAME).service
 	rpmlint $(NAME)
 	$(NAME) --help
 	test $$(rpm -q $(NAME) --queryformat '%{NAME}') == "$(NAME)"
@@ -35,12 +36,11 @@ docker-rpmtest: install
 	test $$(rpm -q $(NAME) --queryformat '%{VERSION}') == "$(VERSION)"
 	test $$($(NAME) --version) == "$(VERSION)"
 
-docker-build-images:
-	docker pull robpol86/rpmfusion-$(MODE)
+docker-build-image:
 	cat DockerfileRPMBuild |envsubst > Dockerfile
 	docker build -t local/$(MODE) .
 	rm Dockerfile
 
-docker-run-both:
+docker-run-all:
 	docker run -v ${PWD}:/build local/$(MODE) make
-	docker run -v ${PWD}:/build:ro -w /build robpol86/rpmfusion-$(MODE) make docker-rpmtest
+	docker run -v ${PWD}:/build:ro local/$(MODE) make docker-rpmtest

@@ -11,4 +11,4 @@ __license__ = 'MIT'
 __version__ = '0.0.1'
 
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '3rdparty'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '3rdparty'))

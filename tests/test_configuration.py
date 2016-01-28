@@ -387,8 +387,9 @@ def test_update_config(monkeypatch, tmpdir, caplog, mode):
     configuration.initialize_config(doc)
 
     # Setup config file.
+    sample = tmpdir.join('sample.log')
     if mode == 'good':
-        tmpdir.join('config.ini').write('[FlashAirMusic]\nlog = sample.log\nffmpeg-bin = {}'.format(ffmpeg))
+        tmpdir.join('config.ini').write('[FlashAirMusic]\nlog = {}\nffmpeg-bin = {}'.format(sample, ffmpeg))
     elif mode == 'corrupted':
         tmpdir.join('config.ini').write('\x00\x00\x00\x00'.encode(), mode='wb')
     elif mode == 'bad_config':
@@ -401,7 +402,7 @@ def test_update_config(monkeypatch, tmpdir, caplog, mode):
     # Verify
     messages = [r.message for r in caplog.records]
     if mode == 'good':
-        assert config['--log'] == 'sample.log'
+        assert config['--log'] == str(sample)
         assert messages[-1] == 'Done reloading configuration.'
     elif mode == 'corrupted':
         assert config == before

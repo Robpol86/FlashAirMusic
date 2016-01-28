@@ -11,10 +11,10 @@ Requires(pre):      shadow-utils
 Requires(preun):    systemd
 Requires:           ffmpeg
 Requires:           python3-docopt
-Requires:           python3-mutagen
 Requires:           python3-requests
 Source0:            %{name}-%{version}.tar.gz
-Source1:            https://raw.githubusercontent.com/Robpol86/docoptcfg/v1.0.1/docoptcfg.py
+Source1:            https://pypi.python.org/packages/source/d/docoptcfg/docoptcfg-1.0.1.tar.gz
+Source2:            https://pypi.python.org/packages/source/m/mutagen/mutagen-1.31.tar.gz
 Summary:            %{getenv:SUMMARY}
 URL:                %{getenv:URL}
 Version:            %{getenv:VERSION}
@@ -47,7 +47,8 @@ Version:            %{getenv:VERSION}
 %{__install} -m 0644 %{name}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 %{__install} -m 0644 %{name}.service %{buildroot}%{_unitdir}/
 %{__install} -m 0644 %{name}.ini %{buildroot}%{_sysconfdir}/%{name}/
-%{__install} -m 0644 %{SOURCE1} %{buildroot}%{python3_sitelib}/%{base_module}/3rdparty/%{basename:%{SOURCE1}}
+tar -C %{buildroot}%{python3_sitelib}/%{base_module}/3rdparty --strip 1 -xzf %{SOURCE1} docoptcfg-1.0.1/docoptcfg.py
+tar -C %{buildroot}%{python3_sitelib}/%{base_module}/3rdparty --strip 1 -xzf %{SOURCE2} mutagen-1.31/mutagen
 
 %pre
 getent group %{daemon_group} >/dev/null || groupadd -r %{daemon_group}

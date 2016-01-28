@@ -285,9 +285,9 @@ def test_convert_songs_semaphore(monkeypatch, tmpdir, caplog):
     ffmpeg = tmpdir.join('ffmpeg')
     ffmpeg.write(dedent("""\
     #!/bin/bash
-    python -c "import time; print('$(basename $2) START_TIME:', time.time())"
+    python3 -c "import time; print('$(basename $2) START_TIME:', time.time())"
     ffmpeg $@
-    python -c "import time; print('$(basename $2) END_TIME:', time.time())"
+    python3 -c "import time; print('$(basename $2) END_TIME:', time.time())"
     """))
     ffmpeg.chmod(0o0755)
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg), '--threads': '2'})

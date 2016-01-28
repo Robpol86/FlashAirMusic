@@ -68,7 +68,7 @@ def setup_logging(config, name=None):
     log_file = os.path.realpath(config['--log']) if config['--log'] else ''
     root_logger = logging.getLogger(name)
     root_logger.setLevel(logging.DEBUG if config['--verbose'] else logging.INFO)
-    formatter_minimal = logging.Formatter('\U0001f4ac  %(message)s')
+    formatter_minimal = logging.Formatter('%(message)s')
     formatter_verbose = logging.Formatter('%(asctime)s %(process)-5d %(levelname)-8s %(name)-40s %(message)s')
 
     # Cleanup previous config if any.

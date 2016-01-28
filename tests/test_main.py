@@ -293,7 +293,7 @@ def test_bug_hangs(monkeypatch, tmpdir):
 
     intercept = tmpdir.join('intercept.py')
     intercept.write(dedent("""\
-    #!/usr/bin/env python
+    #!/usr/bin/env python3
     import signal
     from flash_air_music.__main__ import entry_point
     signal.SIGKILL = signal.SIGTERM
@@ -331,6 +331,5 @@ def test_bug_hangs(monkeypatch, tmpdir):
     assert 'Main loop has exited.' in stdout
     assert 'Task was destroyed but it is pending!' in stdout
     assert 'task: <Task pending coro=<watch_directory() running at' in stdout
-    assert 'Traceback' in stdout
     assert 'BUG!' not in stdout
     assert process.poll() == 0
