@@ -35,6 +35,7 @@ docker-rpmtest: install
 	test "$$(rpm -q $(NAME) --queryformat '%{URL}')" == "$(URL)"
 	test $$(rpm -q $(NAME) --queryformat '%{VERSION}') == "$(VERSION)"
 	test $$($(NAME) --version) == "$(VERSION)"
+	(cd /tests && su -m user -c "py.test-3 .")
 
 docker-build-image:
 	cat DockerfileRPMBuild |envsubst > Dockerfile
@@ -43,4 +44,4 @@ docker-build-image:
 
 docker-run-all:
 	docker run -v ${PWD}:/build local/$(MODE) make
-	docker run -v ${PWD}:/build:ro local/$(MODE) make docker-rpmtest
+	docker run -v ${PWD}:/build:ro -v ${PWD}/tests:/tests:ro local/$(MODE) make docker-rpmtest

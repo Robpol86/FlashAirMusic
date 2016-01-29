@@ -3,12 +3,14 @@
 FROM robpol86/rpmdevtools-$MODE
 MAINTAINER Robpol86 <robpol86@gmail.com>
 
-VOLUME /build
+VOLUME /build /tests
 ADD $NAME.spec README.rst /build/
 WORKDIR /build
 
 ENV NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
+RUN groupadd -r user && useradd -r -g user user
 RUN dnf builddep -y --spec $NAME.spec
-RUN dnf install -y \
+RUN pip3 install pytest-catchlog && dnf install -y \
+    python3-pytest \
     http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-23.noarch.rpm \
     http://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-23.noarch.rpm
