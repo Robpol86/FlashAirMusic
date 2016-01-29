@@ -1,4 +1,4 @@
+include FlashAirMusic.ini
 include FlashAirMusic.logrotate
 include FlashAirMusic.service
-include FlashAirMusic.ini
 include LICENSE

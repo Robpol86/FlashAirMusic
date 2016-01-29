@@ -35,6 +35,8 @@ Version:            %{getenv:VERSION}
 %autosetup -n %{name}-%{version}
 
 %build
+%{__tar} -C %{base_module}/_3rdparty --strip 1 -xzf %{SOURCE1} docoptcfg-*/docoptcfg.py
+%{__tar} -C %{base_module}/_3rdparty --strip 1 -xzf %{SOURCE2} mutagen-*/mutagen
 %py3_build
 
 %install
@@ -43,12 +45,9 @@ Version:            %{getenv:VERSION}
 %{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/%{name}
 %{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/logrotate.d
 %{__install} -d -m 0755 %{buildroot}%{_unitdir}
-%{__install} -d -m 0755 %{buildroot}%{python3_sitelib}/%{base_module}/3rdparty
+%{__install} -m 0644 %{name}.ini %{buildroot}%{_sysconfdir}/%{name}/
 %{__install} -m 0644 %{name}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 %{__install} -m 0644 %{name}.service %{buildroot}%{_unitdir}/
-%{__install} -m 0644 %{name}.ini %{buildroot}%{_sysconfdir}/%{name}/
-tar -C %{buildroot}%{python3_sitelib}/%{base_module}/3rdparty --strip 1 -xzf %{SOURCE1} docoptcfg-1.0.1/docoptcfg.py
-tar -C %{buildroot}%{python3_sitelib}/%{base_module}/3rdparty --strip 1 -xzf %{SOURCE2} mutagen-1.31/mutagen
 
 %pre
 getent group %{daemon_group} >/dev/null || groupadd -r %{daemon_group}
@@ -71,9 +70,9 @@ exit 0
 %dir %attr(-, %{daemon_user}, %{daemon_group}) %{_localstatedir}/log/%{name}
 %doc README.rst
 %license LICENSE
+%{_bindir}/%{name}
 %{_unitdir}/%{name}.service
 %{python3_sitelib}/*
-%{_bindir}/%{name}
 
 %changelog
 %{lua:

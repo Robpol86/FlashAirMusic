@@ -4,11 +4,10 @@ FROM robpol86/rpmdevtools-$MODE
 MAINTAINER Robpol86 <robpol86@gmail.com>
 
 VOLUME /build
+ADD $NAME.spec README.rst /build/
 WORKDIR /build
 
 ENV NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
-ADD ["$NAME.spec", "README.rst", "/build/"]
-
 RUN dnf builddep -y --spec $NAME.spec
 RUN dnf install -y \
     http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-23.noarch.rpm \
