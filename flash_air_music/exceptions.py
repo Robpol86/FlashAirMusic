@@ -4,22 +4,30 @@
 class BaseError(Exception):
     """Base class for other narrow-scoped exceptions."""
 
-    pass
-
 
 class ConfigError(BaseError):
     """Error while reading configuration data."""
 
-    pass
-
 
 class CorruptedTargetFile(BaseError):
-    """Error while operating on convered target file."""
+    """Error while operating on converted target file."""
 
-    pass
+
+class FlashAirError(BaseError):
+    """Error while accessing the FlashAir card's API."""
+
+
+class FlashAirDirNotFoundError(FlashAirError):
+    """Directory not found on card."""
+
+
+class FlashAirHTTPError(FlashAirError):
+    """API returned non-200 status code."""
+
+
+class FlashAirBadResponse(FlashAirError):
+    """Unexpected data returned by API."""
 
 
 class ShuttingDown(BaseError):
     """Raised when shutdown_future is set."""
-
-    pass
