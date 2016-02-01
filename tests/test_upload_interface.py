@@ -1,80 +1,42 @@
 """Test functions in module."""
 
 import datetime
-import urllib.parse
 
-import httpretty
 import pytest
 
 from flash_air_music import exceptions
+from flash_air_music.upload import api
 from flash_air_music.upload.interface import get_card_time_zone, get_files
 
 TZINFO = datetime.timezone(datetime.timedelta(hours=-8))  # Tests are written with Pacific Time in mind.
 
 
-@pytest.mark.httpretty
-@pytest.mark.parametrize('mode', ['400', 'bad response', '-32'])
-def test_get_card_time_zone(mode):
-    """Test error handling and empty root directory.
+def test_get_card_time_zone(monkeypatch):
+    """Test get_card_time_zone().
 
-    :param str mode: Scenario to test for.
+    :param monkeypatch: pytest fixture.
     """
-    # Setup responses and expectations.
-    if mode == '400':
-        status, body, exception, expected = 400, '', exceptions.FlashAirHTTPError, 400
-    elif mode == 'bad response':
-        status, body, exception, expected = 200, 'unexpected', exceptions.FlashAirBadResponse, 'unexpected'
-    else:
-        status, body, exception, expected = 200, mode, None, TZINFO
-    httpretty.register_uri(httpretty.GET, 'http://flashair/command.cgi?op=221&DIR=/MUSIC', body=body, status=status)
-
-    # Handle non-exception.
-    if mode == '-32':
-        actual = get_card_time_zone('flashair')
-        assert actual == expected
-        return
-
-    # Handle exceptions.
-    with pytest.raises(exception) as exc:
-        get_card_time_zone('flashair')
-    assert exc.value.args[0] == expected
+    monkeypatch.setattr(api, 'command_get_time_zone', lambda _: -32)
+    actual = get_card_time_zone('flashair')
+    assert actual == TZINFO
 
 
-@pytest.mark.httpretty
-@pytest.mark.parametrize('mode', ['404', '400', 'bad response', 'empty'])
-def test_get_files_errors_empty_root(mode):
-    """Test error handling and empty root directory.
+def test_get_files_empty_root(monkeypatch):
+    """Test get_files() with empty root directory.
 
-    :param str mode: Scenario to test for.
+    :param monkeypatch: pytest fixture.
     """
-    # Setup responses and expectations.
-    if mode == '404':
-        status, body, exception, expected = 404, '', exceptions.FlashAirDirNotFoundError, '/MUSIC'
-    elif mode == '400':
-        status, body, exception, expected = 400, '', exceptions.FlashAirHTTPError, 400
-    elif mode == 'bad response':
-        status, body, exception, expected = 200, 'unexpected', exceptions.FlashAirBadResponse, 'unexpected'
-    else:
-        status, body, exception, expected = 200, 'WLANSD_FILELIST\r\n', None, (list(), ['/MUSIC'])
-    httpretty.register_uri(httpretty.GET, 'http://flashair/command.cgi?op=100&DIR=/MUSIC', body=body, status=status)
-
-    # Handle non-exception.
-    if mode == 'empty':
-        actual = get_files('flashair', TZINFO)
-        assert actual == expected
-        return
-
-    # Handle exceptions.
-    with pytest.raises(exception) as exc:
-        get_files('flashair', TZINFO)
-    assert exc.value.args[0] == expected
+    monkeypatch.setattr(api, 'command_get_file_list', lambda *_: 'WLANSD_FILELIST\r\n')
+    actual = get_files('flashair', TZINFO)
+    expected = list(), ['/MUSIC']
+    assert actual == expected
 
 
-@pytest.mark.httpretty
 @pytest.mark.parametrize('mode', ['ignore', 'one', 'two', 'three partial'])
-def test_get_files_simple(mode):
-    """Test simple file structure with no directories.
+def test_get_files_simple(monkeypatch, mode):
+    """Test get_files() and ftime_to_epoch() with simple file structure and no directories.
 
+    :param monkeypatch: pytest fixture.
     :param str mode: Scenario to test for.
     """
     # Setup responses and expectations.
@@ -98,39 +60,39 @@ def test_get_files_simple(mode):
             [('/MUSIC/song.mp3', 7733944, 1454191310), ('/MUSIC/09 - Half-Penny, Two-Penny.mp3', 11704554, 1418026768)],
             list()
         )
-    httpretty.register_uri(httpretty.GET, 'http://flashair/command.cgi?op=100&DIR=/MUSIC', body=body)
+    monkeypatch.setattr(api, 'command_get_file_list', lambda *_: body)
 
     # Run.
     actual = get_files('flashair', TZINFO)
     assert actual == expected
 
 
-@pytest.mark.httpretty
-def test_get_files_recursive():
-    """Test with directories."""
-    def request_callback(_, url, headers):
-        """Mock HTTP responses.
+def test_get_files_recursive(monkeypatch):
+    """Test get_files() recursing into directories.
+
+    :param monkeypatch: pytest fixture.
+    """
+    def request_callback(_, directory):
+        """Mock responses.
 
         :param _: unused.
-        :param str url: URL queried.
-        :param dict headers: HTTP headers.
+        :param str directory: Directory queried.
         """
-        body = ''
-        if url.endswith('DIR=/MUSIC'):
-            # Root directory.
+        body = None
+        if directory == '/MUSIC':
             body = ('WLANSD_FILELIST\r\n'
                     '/MUSIC,04 Slip.mp3,11869064,32,15082,38565\r\n'
                     '/MUSIC,empty,0,16,18494,39799\r\n'
                     '/MUSIC,ignore,0,16,18494,39804\r\n'
                     '/MUSIC,more music,0,16,18494,39829\r\n')
-        elif url.endswith('DIR=/MUSIC/empty'):
+        elif directory == '/MUSIC/empty':
             body = 'WLANSD_FILELIST\r\n'
-        elif url.endswith('DIR=/MUSIC/ignore'):
+        elif directory == '/MUSIC/ignore':
             body = 'WLANSD_FILELIST\r\n/MUSIC/ignore,ignore.txt,0,32,18494,39826\r\n'
-        elif url.endswith('DIR=/MUSIC/more%20music'):
+        elif directory == '/MUSIC/more music':
             body = "WLANSD_FILELIST\r\n/MUSIC/more music,02 - Rockin' the Paradise.mp3,7077241,32,17800,620\r\n"
-        return 200, headers, body
-    httpretty.register_uri(httpretty.GET, 'http://flashair/command.cgi', body=request_callback)
+        return body
+    monkeypatch.setattr(api, 'command_get_file_list', request_callback)
 
     # Run.
     actual = get_files('flashair', TZINFO)
@@ -144,23 +106,21 @@ def test_get_files_recursive():
     assert actual == expected
 
 
-@pytest.mark.httpretty
-def test_get_files_long_file_names(caplog):
-    """Test with long file/dir names.
+def test_get_files_long_file_names(monkeypatch, caplog):
+    """Test get_files() with long file/dir names.
 
     Apparently the FlashAir API doesn't handle long file names very well, probably running into the URL length limit.
 
+    :param monkeypatch: pytest fixture.
     :param caplog: pytest extension fixture.
     """
-    def request_callback(_, url, headers):
+    def request_callback(_, directory):
         """Mock HTTP responses.
 
         :param _: unused.
-        :param str url: URL queried.
-        :param dict headers: HTTP headers.
+        :param str directory: Directory queried.
         """
-        body, status = '', 200
-        if url.endswith('DIR=/MUSIC'):
+        if directory == '/MUSIC':
             # Root directory.
             body = ('WLANSD_FILELIST\r\n'
                     '/MUSIC,Bacon ipsum dolor amet corned beef fatback bresaola meatloaf, landjaeger ham hock t-bone gr'
@@ -173,11 +133,11 @@ def test_get_files_long_file_names(caplog):
                     '/MUSIC,Ribeye leberkas beef ribs doner capicola shankle swine short ribs fatback alcatra shoulder '
                     'pork belly meatball picanha. Pork belly pancetta t-bone tail. Filet mignon pork chop chicken andou'
                     'ille, tongue rump tri-tip turducken spare ribs ball tip. Tai,0,48,18494,42499\r\n')
-        elif url.endswith('DIR=/MUSIC/TENDER~1.DON'):
+        elif directory == '/MUSIC/TENDER~1.DON':
             body = 'WLANSD_FILELIST\r\n/MUSIC/TENDER~1.DON,song1.MP3,11869064,32,15082,38565\r\n'
-        elif url.endswith('DIR=/MUSIC/GROUND~1.DRU'):
+        elif directory == '/MUSIC/GROUND~1.DRU':
             body = 'WLANSD_FILELIST\r\n/MUSIC/GROUND~1.DRU,song1.MP3,11869064,32,15082,38565\r\n'
-        elif url.endswith('Tai'):
+        elif directory.endswith('Tai'):
             body = ('WLANSD_FILELIST\r\n'
                     '/MUSIC/Ribeye leberkas beef ribs doner capicola shankle swine short ribs fatback alcatra shoulder '
                     'pork belly meatball picanha. Pork belly pancetta t-bone tail. Filet mignon pork chop chicken andou'
@@ -185,9 +145,9 @@ def test_get_files_long_file_names(caplog):
                     'tback bresaola meatloaf, landjaeger ham hock t-bone ground round short ribs cupim ham doner swine '
                     'pig..MP3,11869064,32,15082,38565\r\n')
         else:
-            status = 400
-        return status, headers, body
-    httpretty.register_uri(httpretty.GET, 'http://flashair/command.cgi', body=request_callback)
+            raise exceptions.FlashAirURLTooLong('', None)
+        return body
+    monkeypatch.setattr(api, 'command_get_file_list', request_callback)
 
     # Run.
     actual = get_files('flashair', TZINFO)
@@ -209,15 +169,15 @@ def test_get_files_long_file_names(caplog):
 
     # Verify.
     assert actual == expected
-    assert '\n'.join(messages).count('URL too long, ignoring: ') == 1
+    assert '\n'.join(messages).count('Directory path too long, ignoring: ') == 1
 
 
-@pytest.mark.httpretty
-def test_get_files_special_characters(caplog):
+def test_get_files_special_characters(monkeypatch, caplog):
     """Test with special characters. FlashAir API does not support all legal FAT32 file name characters.
 
     At least legal for FAT32 and not Windows. OS X lets me set these.
 
+    :param monkeypatch: pytest fixture.
     :param caplog: pytest extension fixture.
     """
     good_mapping = {
@@ -235,15 +195,13 @@ def test_get_files_special_characters(caplog):
         '~~~~~~56': '6',  # ?
     }
 
-    def request_callback(_, url, headers):
+    def request_callback(_, directory):
         """Mock HTTP responses.
 
         :param _: unused.
-        :param str url: URL queried.
-        :param dict headers: HTTP headers.
+        :param str directory: Directory queried.
         """
-        body, status, url = '', 200, urllib.parse.unquote(url)
-        if url.endswith('DIR=/MUSIC'):
+        if directory == '/MUSIC':
             # Root directory.
             body = ("WLANSD_FILELIST\r\n"
                     "/MUSIC,~,0,16,18494,44088\r\n"
@@ -277,16 +235,16 @@ def test_get_files_special_characters(caplog):
                     "/MUSIC,~~~~~~56,0,16,18494,44153\r\n"
                     "/MUSIC,ñ,0,16,18494,44157\r\n"
                     "/MUSIC,Ã©,0,16,18494,44164\r\n")
-        elif url[-1] in good_mapping:
-            key = url[-1]
+        elif directory[-1] in good_mapping:
+            key = directory[-1]
             body = 'WLANSD_FILELIST\r\n/MUSIC/{},{}.mp3,11869064,32,15082,38565\r\n'.format(key, good_mapping[key])
-        elif any(url.endswith(k) for k in weird_mapping):
-            key = [k for k in weird_mapping if url.endswith(k)][0]
+        elif any(directory.endswith(k) for k in weird_mapping):
+            key = [k for k in weird_mapping if directory.endswith(k)][0]
             body = 'WLANSD_FILELIST\r\n/MUSIC/{},{}.mp3,11869064,32,15082,38565\r\n'.format(key, weird_mapping[key])
         else:
-            status = 400
-        return status, headers, body
-    httpretty.register_uri(httpretty.GET, 'http://flashair/command.cgi', body=request_callback)
+            raise exceptions.FlashAirHTTPError(400, None)
+        return body
+    monkeypatch.setattr(api, 'command_get_file_list', request_callback)
 
     # Run.
     actual = get_files('flashair', TZINFO)

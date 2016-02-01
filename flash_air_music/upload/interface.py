@@ -1,16 +1,11 @@
-"""Interface with the FlashAir card over WiFi. Performs API calls to it.
-
-Make sure /SD_WLAN/CONFIG exists on the card and is configured to connect to your home WiFi.
-"""
+"""Interface with the FlashAir card over WiFi. Parse API responses."""
 
 import datetime
 import logging
 import re
-import urllib.parse
-
-import requests
 
 from flash_air_music import exceptions
+from flash_air_music.upload import api
 
 REMOTE_ROOT_DIRECTORY = '/MUSIC'
 
@@ -39,28 +34,15 @@ def ftime_to_epoch(fdate, ftime, tzinfo):
 def get_card_time_zone(ip_addr):
     """Get the time zone currently configured on the card.
 
+    :raise FlashAirBadResponse: When API returns unexpected/malformed data.
+    :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+
     :param str ip_addr: IP address of FlashAir to connect to.
 
     :return: Timezone instance.
     :rtype: datetime.timezone
     """
-    log = logging.getLogger(__name__)
-    url = 'http://{}/command.cgi?op=221'.format(ip_addr)
-
-    # Hit API.
-    log.debug('Querying url %s', url)
-    response = requests.get(url)
-    log.debug('Response code: %d', response.status_code)
-    log.debug('Response text: %s', response.text)
-    if not response.ok:
-        raise exceptions.FlashAirHTTPError(response.status_code, response)
-
-    # Parse response.
-    try:
-        fifteen_min_offset = int(response.text)
-    except (TypeError, ValueError):
-        raise exceptions.FlashAirBadResponse(response.text, response)
-
+    fifteen_min_offset = api.command_get_time_zone(ip_addr)
     return datetime.timezone(datetime.timedelta(hours=fifteen_min_offset / 4.0))
 
 
@@ -73,6 +55,11 @@ def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
     https://flashair-developers.com/en/documents/api/commandcgi/#100
     https://github.com/JakeJP/FlashAirJS/blob/master/js/flashAirClient.js
 
+    :raise FlashAirBadResponse: When API returns unexpected/malformed data.
+    :raise FlashAirDirNotFoundError: When the queried directory does not exist on the card.
+    :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirURLTooLong: When the queried directory path is too long.
+
     :param str ip_addr: IP address of FlashAir to connect to.
     :param str directory: Remote directory to get file list from.
     :param datetime.timezone tzinfo: Timezone the card is set to.
@@ -82,32 +69,22 @@ def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
     """
     log = logging.getLogger(__name__)
     directory = directory.rstrip('/')  # Remove trailing slash.
-    url = 'http://{}/command.cgi?op=100&DIR={}'.format(ip_addr, urllib.parse.quote(directory))
 
-    # Hit API.
-    log.debug('Querying url %s', url)
-    response = requests.get(url)
-    log.debug('Response code: %d', response.status_code)
-    log.debug('Response text: %s', response.text)
-    if response.status_code == 404:
-        raise exceptions.FlashAirDirNotFoundError(directory, response)
-    if not response.ok:
-        if len('{}?{}'.format(urllib.parse.urlsplit(url).path, urllib.parse.urlsplit(url).query)) > 280:
-            log.warning('URL too long, ignoring: %s', url)
-            return list(), list()
-        raise exceptions.FlashAirHTTPError(response.status_code, response)
-    if not response.text.startswith('WLANSD_FILELIST'):
-        raise exceptions.FlashAirBadResponse(response.text, response)
-    if response.text.count('\n') <= 1:
+    # Query API.
+    response_text = api.command_get_file_list(ip_addr, directory)
+    if response_text.count('\n') <= 1:
         return list(), [directory]  # No files in directory.
 
-    # Discover files and empty directories.
+    # Parse response.
     files, empty_dirs = list(), list()
     regex = re.compile(r'^.{%d},(.+?),(\d+),(\d+),(\d+),(\d+)$' % len(directory), re.MULTILINE)
-    for name, size, attr, fdate, ftime in (i.groups() for i in regex.finditer(response.text.replace('\r', ''))):
+    for name, size, attr, fdate, ftime in (i.groups() for i in regex.finditer(response_text.replace('\r', ''))):
         if int(attr) & 16:  # Handle directory.
             try:
                 subdir = get_files(ip_addr, tzinfo, '{}/{}'.format(directory, name))  # Recurse into dir.
+            except exceptions.FlashAirURLTooLong:
+                log.warning('Directory path too long, ignoring: %s', name)
+                continue
             except exceptions.FlashAirError:
                 log.warning('Unable to handle special characters in directory name: %s', name)
                 continue

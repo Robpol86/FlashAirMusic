@@ -29,5 +29,9 @@ class FlashAirBadResponse(FlashAirError):
     """Unexpected data returned by API."""
 
 
+class FlashAirURLTooLong(FlashAirError):
+    """FlashAIR HTTP query URL too long."""
+
+
 class ShuttingDown(BaseError):
     """Raised when shutdown_future is set."""
