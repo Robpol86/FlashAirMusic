@@ -1,12 +1,12 @@
 """Test functions in module."""
 
 import datetime
+import os
 
 import pytest
 
 from flash_air_music import exceptions
-from flash_air_music.upload import api
-from flash_air_music.upload.interface import get_card_time_zone, get_files
+from flash_air_music.upload import api, interface
 
 TZINFO = datetime.timezone(datetime.timedelta(hours=-8))  # Tests are written with Pacific Time in mind.
 
@@ -17,7 +17,7 @@ def test_get_card_time_zone(monkeypatch):
     :param monkeypatch: pytest fixture.
     """
     monkeypatch.setattr(api, 'command_get_time_zone', lambda _: -32)
-    actual = get_card_time_zone('flashair')
+    actual = interface.get_card_time_zone('flashair')
     assert actual == TZINFO
 
 
@@ -27,7 +27,7 @@ def test_get_files_empty_root(monkeypatch):
     :param monkeypatch: pytest fixture.
     """
     monkeypatch.setattr(api, 'command_get_file_list', lambda *_: 'WLANSD_FILELIST\r\n')
-    actual = get_files('flashair', TZINFO)
+    actual = interface.get_files('flashair', TZINFO)
     expected = list(), ['/MUSIC']
     assert actual == expected
 
@@ -63,7 +63,7 @@ def test_get_files_simple(monkeypatch, mode):
     monkeypatch.setattr(api, 'command_get_file_list', lambda *_: body)
 
     # Run.
-    actual = get_files('flashair', TZINFO)
+    actual = interface.get_files('flashair', TZINFO)
     assert actual == expected
 
 
@@ -95,7 +95,7 @@ def test_get_files_recursive(monkeypatch):
     monkeypatch.setattr(api, 'command_get_file_list', request_callback)
 
     # Run.
-    actual = get_files('flashair', TZINFO)
+    actual = interface.get_files('flashair', TZINFO)
     expected = (
         [
             ('/MUSIC/04 Slip.mp3', 11869064, 1247280790),
@@ -150,7 +150,7 @@ def test_get_files_long_file_names(monkeypatch, caplog):
     monkeypatch.setattr(api, 'command_get_file_list', request_callback)
 
     # Run.
-    actual = get_files('flashair', TZINFO)
+    actual = interface.get_files('flashair', TZINFO)
     expected = (
         [
             ('/MUSIC/Bacon ipsum dolor amet corned beef fatback bresaola meatloaf, landjaeger ham hock t-bone ground ro'
@@ -173,7 +173,7 @@ def test_get_files_long_file_names(monkeypatch, caplog):
 
 
 def test_get_files_special_characters(monkeypatch, caplog):
-    """Test with special characters. FlashAir API does not support all legal FAT32 file name characters.
+    """Test get_files() with special characters. FlashAir API does not support all legal FAT32 file name characters.
 
     At least legal for FAT32 and not Windows. OS X lets me set these.
 
@@ -247,7 +247,7 @@ def test_get_files_special_characters(monkeypatch, caplog):
     monkeypatch.setattr(api, 'command_get_file_list', request_callback)
 
     # Run.
-    actual = get_files('flashair', TZINFO)
+    actual = interface.get_files('flashair', TZINFO)
     expected = (
         [
             ('/MUSIC/~/s.mp3', 11869064, 1247280790),
@@ -286,3 +286,66 @@ def test_get_files_special_characters(monkeypatch, caplog):
     # Verify.
     assert actual == expected
     assert '\n'.join(messages).count('Unable to handle special characters in directory name: ') == 3
+
+
+def test_delete_files_dirs(monkeypatch):
+    """Test delete_files_dirs().
+
+    :param monkeypatch: pytest fixture.
+    :return:
+    """
+    order = list()
+    monkeypatch.setattr(api, 'upload_delete', lambda _, p: order.append(p))
+
+    paths = [
+        '/',
+        '/MUSIC',
+        '/MUSIC/',
+        '/MUSIC/song.mp3',
+        '/MUSIC/subdir',
+        '/MUSIC/subdir/a.mp3',
+        '/MUSIC/subdir/b.mp3',
+    ]
+    interface.delete_files_dirs('flashair', paths)
+
+    expected = [
+        '/MUSIC/subdir/b.mp3',
+        '/MUSIC/subdir/a.mp3',
+        '/MUSIC/subdir',
+        '/MUSIC/song.mp3',
+    ]
+    assert order == expected
+
+
+@pytest.mark.parametrize('mode', ['no dir', 'no file', 'error', ''])
+def test_initialize_upload(monkeypatch, mode):
+    """Test initialize_upload().
+
+    :param monkeypatch: pytest fixture.
+    :param mode: Scenario to test for.
+    """
+    monkeypatch.setattr(api, 'upload_ftime_updir_writeprotect', lambda *_: None)
+    uploaded = list()
+    script_size = os.stat(interface.LUA_HELPER_SCRIPT).st_size
+
+    def command_get_file_list(*_):
+        """Mock."""
+        if not uploaded and mode == 'no dir':
+            raise exceptions.FlashAirDirNotFoundError
+        if (not uploaded and mode != '') or (uploaded and mode == 'error'):
+            return 'WLANSD_FILELIST\r\n'
+        return 'WLANSD_FILELIST\r\n/MUSIC,_fam_move_touch.lua,{},32,18495,28453\r\n'.format(script_size)
+    monkeypatch.setattr(api, 'command_get_file_list', command_get_file_list)
+
+    def upload_upload_file(*args):
+        """Mock."""
+        uploaded.append(True)
+        assert args[1] == '_fam_move_touch.lua'
+    monkeypatch.setattr(api, 'upload_upload_file', upload_upload_file)
+
+    if mode != 'error':
+        interface.initialize_upload('flashair', TZINFO)
+        return
+
+    with pytest.raises(exceptions.FlashAirBadResponse):
+        interface.initialize_upload('flashair', TZINFO)

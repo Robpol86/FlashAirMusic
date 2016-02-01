@@ -79,6 +79,40 @@ def test_command_get_time_zone(mode):
 
 @pytest.mark.httpretty
 @pytest.mark.parametrize('bad', [True, False])
+def test_lua_script_execute(bad):
+    """Test lua_script_execute().
+
+    :param bool bad: Test exception.
+    """
+    httpretty.register_uri(httpretty.GET, 'http://flashair/MUSIC/script.lua', body=':)', status=400 if bad else 200)
+
+    if not bad:
+        actual = api.lua_script_execute('flashair', '/MUSIC/script.lua', 'a 1 c d')
+        assert actual == ':)'
+        return
+
+    with pytest.raises(exceptions.FlashAirHTTPError):
+        api.lua_script_execute('flashair', '/MUSIC/script.lua', 'a 1 c d')
+
+
+@pytest.mark.httpretty
+@pytest.mark.parametrize('bad', [True, False])
+def test_upload_delete(bad):
+    """Test upload_delete().
+
+    :param bool bad: Test exception.
+    """
+    httpretty.register_uri(httpretty.GET, 'http://flashair/upload.cgi', body='', status=400 if bad else 200)
+
+    if not bad:
+        return api.upload_delete('flashair', '/MUSIC/file.mp3')
+
+    with pytest.raises(exceptions.FlashAirHTTPError):
+        api.upload_delete('flashair', '/MUSIC/file.mp3')
+
+
+@pytest.mark.httpretty
+@pytest.mark.parametrize('bad', [True, False])
 def test_upload_ftime_updir_writeprotect(bad):
     """Test upload_ftime_updir_writeprotect().
 

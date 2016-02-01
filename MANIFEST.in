@@ -1,3 +1,4 @@
+include flash_air_music/upload/_fam_move_touch.lua
 include FlashAirMusic.ini
 include FlashAirMusic.logrotate
 include FlashAirMusic.service

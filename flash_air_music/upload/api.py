@@ -75,6 +75,50 @@ def command_get_time_zone(ip_addr):
         raise exceptions.FlashAirBadResponse(response.text, response)
 
 
+def lua_script_execute(ip_addr, script_path, argv):
+    """Execute Lua script over HTTP.
+
+    :param str ip_addr: IP address of FlashAir to connect to.
+    :param str script_path: Remote path to Lua script.
+    :param str argv: URL-compatible arguments to pass to script.
+
+    :return: Unprocessed text response.
+    :rtype: str
+    """
+    log = logging.getLogger(__name__)
+    url = 'http://{}/{}?{}'.format(ip_addr, script_path.strip('/'), urllib.parse.quote(argv))
+
+    # Hit API.
+    log.debug('Querying url %s', url)
+    response = requests.get(url)
+    log.debug('Response code: %d', response.status_code)
+    log.debug('Response text: %s', response.text)
+    if not response.ok:
+        raise exceptions.FlashAirHTTPError(response.status_code, response)
+
+    return response.text
+
+
+def upload_delete(ip_addr, path):
+    """upload.cgi?DEL={}: delete a file or directory.
+
+    Not recursive. Delete responsibly to avoid orphaning children.
+
+    :param str ip_addr: IP address of FlashAir to connect to.
+    :param str path: Remote path to delete.
+    """
+    log = logging.getLogger(__name__)
+    url = 'http://{}/upload.cgi?DEL={}'.format(ip_addr, path)
+
+    # Hit API.
+    log.debug('Querying url %s', url)
+    response = requests.get(url)
+    log.debug('Response code: %d', response.status_code)
+    log.debug('Response text: %s', response.text)
+    if not response.ok:
+        raise exceptions.FlashAirHTTPError(response.status_code, response)
+
+
 def upload_ftime_updir_writeprotect(ip_addr, directory, ftime):
     """upload.cgi?FTIME={}&UPDIR={}&WRITEPROTECT=ON: prepare for upload.
 

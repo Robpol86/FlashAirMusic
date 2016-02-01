@@ -2,12 +2,34 @@
 
 import datetime
 import logging
+import os
 import re
 
 from flash_air_music import exceptions
 from flash_air_music.upload import api
 
+LUA_HELPER_SCRIPT = os.path.join(os.path.dirname(__file__), '_fam_move_touch.lua')
 REMOTE_ROOT_DIRECTORY = '/MUSIC'  # Must not be more than 1 level deep due to API constraints and my laziness.
+
+
+def datetime_to_ftime(tzinfo):
+    """Current time in DOS/Win32 FILEDATE/FILETIME format.
+
+    From: https://flashair-developers.com/en/documents/tutorials/advanced/2/
+
+    :param datetime.timezone tzinfo: Timezone the card is set to.
+
+    :return: Current FILETIME formatted in a string as a 32bit hex number.
+    :rtype: str
+    """
+    now = datetime.datetime.now(tzinfo)
+    year = (now.year - 1980) << 9
+    month = now.month << 5
+    day = now.day
+    hour = now.hour << 11
+    minute = now.minute << 5
+    second = now.second // 2
+    return '0x{:x}{:x}'.format(year + month + day, hour + minute + second)
 
 
 def ftime_to_epoch(fdate, ftime, tzinfo):
@@ -94,3 +116,51 @@ def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
             files.append(('{}/{}'.format(directory, name), int(size), ftime_to_epoch(int(fdate), int(ftime), tzinfo)))
 
     return files, empty_dirs
+
+
+def delete_files_dirs(ip_addr, paths):
+    """Delete files and directories on the FlashAir card.
+
+    :param str ip_addr: IP address of FlashAir to connect to.
+    :param iter paths: List of file/dir paths to remove.
+    """
+    forbidden = (REMOTE_ROOT_DIRECTORY, '')
+    sorted_paths = sorted((p for p in paths if p.rstrip('/') not in forbidden), reverse=True)
+    for path in sorted_paths:
+        api.upload_delete(ip_addr, path)
+
+
+def initialize_upload(ip_addr, tzinfo):
+    """Prepare the FlashAir card for uploading files.
+
+    Set the system clock on the card, set the upload directory, and enable write project on the host it's attached to.
+
+    Also upload the helper Lua script to the REMOTE_ROOT_DIRECTORY.
+
+    :raise FlashAirBadResponse: When API returns unexpected/malformed data.
+    :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+
+    :param str ip_addr: IP address of FlashAir to connect to.
+    :param datetime.timezone tzinfo: Timezone the card is set to.
+    """
+    log = logging.getLogger(__name__)
+
+    # Prepare card via upload.cgi.
+    api.upload_ftime_updir_writeprotect(ip_addr, REMOTE_ROOT_DIRECTORY, datetime_to_ftime(tzinfo))
+
+    # Upload helper script if not there.
+    try:
+        text = api.command_get_file_list(ip_addr, REMOTE_ROOT_DIRECTORY)
+    except exceptions.FlashAirDirNotFoundError:
+        pass
+    else:
+        if os.path.basename(LUA_HELPER_SCRIPT) in text:
+            return  # Script already there.
+    with open(LUA_HELPER_SCRIPT, mode='rb') as handle:
+        api.upload_upload_file(ip_addr, os.path.basename(handle.name), handle)
+
+    # Verify script uploaded successfully.
+    text = api.command_get_file_list(ip_addr, REMOTE_ROOT_DIRECTORY)
+    if '{},{}'.format(os.path.basename(LUA_HELPER_SCRIPT), os.stat(LUA_HELPER_SCRIPT).st_size) not in text:
+        log.error('Lua script upload failed!')
+        raise exceptions.FlashAirBadResponse(text, None)
