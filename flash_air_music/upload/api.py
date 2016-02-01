@@ -73,3 +73,50 @@ def command_get_time_zone(ip_addr):
         return int(response.text)
     except (TypeError, ValueError):
         raise exceptions.FlashAirBadResponse(response.text, response)
+
+
+def upload_ftime_updir_writeprotect(ip_addr, directory, ftime):
+    """upload.cgi?FTIME={}&UPDIR={}&WRITEPROTECT=ON: prepare for upload.
+
+    * Sets system clock on the card to current time.
+    * Defines directory where files will be uploaded to.
+    * Enabled write protect for the attached host.
+
+    Setting write protect prevents host devices from writing to the card while files are being written to it over the
+    HTTP API. Card will need to be cycled to undo the host lock.
+
+    :param str ip_addr: IP address of FlashAir to connect to.
+    :param str directory: Remote directory to upload files to.
+    :param str ftime: Current FILETIME as a 32bit hex number.
+    """
+    log = logging.getLogger(__name__)
+    url = 'http://{}/upload.cgi?FTIME={}&UPDIR={}&WRITEPROTECT=ON'.format(ip_addr, ftime, directory)
+
+    # Hit API.
+    log.debug('Querying url %s', url)
+    response = requests.get(url)
+    log.debug('Response code: %d', response.status_code)
+    log.debug('Response text: %s', response.text)
+    if not response.ok:
+        raise exceptions.FlashAirHTTPError(response.status_code, response)
+
+
+def upload_upload_file(ip_addr, file_name, handle):
+    """upload.cgi: Upload a file to the card over WiFi.
+
+    File mtime is set to the current time. No way around it.
+
+    :param str ip_addr: IP address of FlashAir to connect to.
+    :param file_name: File name to write to on the card in UPDIR.
+    :param handle: Opened file handle (binary mode) to stream from.
+    """
+    log = logging.getLogger(__name__)
+    url = 'http://{}/upload.cgi'.format(ip_addr)
+
+    # POST the file.
+    log.debug('POSTing to %s', url)
+    response = requests.post(url, files={'file': (file_name, handle)})
+    log.debug('Response code: %d', response.status_code)
+    log.debug('Response text: %s', response.text)
+    if not response.ok:
+        raise exceptions.FlashAirHTTPError(response.status_code, response)

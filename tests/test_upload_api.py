@@ -6,7 +6,8 @@ import httpretty
 import pytest
 
 from flash_air_music import exceptions
-from flash_air_music.upload.api import command_get_file_list, command_get_time_zone
+from flash_air_music.upload import api
+from tests import HERE
 
 
 @pytest.mark.httpretty
@@ -38,13 +39,13 @@ def test_command_get_file_list(mode):
 
     # Handle non-exception.
     if not mode:
-        actual = command_get_file_list('flashair', directory)
+        actual = api.command_get_file_list('flashair', directory)
         assert actual == expected
         return
 
     # Handle exceptions.
     with pytest.raises(exception) as exc:
-        command_get_file_list('flashair', directory)
+        api.command_get_file_list('flashair', directory)
     assert exc.value.args[0] == expected
 
 
@@ -66,11 +67,43 @@ def test_command_get_time_zone(mode):
 
     # Handle non-exception.
     if mode == '-32':
-        actual = command_get_time_zone('flashair')
+        actual = api.command_get_time_zone('flashair')
         assert actual == expected
         return
 
     # Handle exceptions.
     with pytest.raises(exception) as exc:
-        command_get_time_zone('flashair')
+        api.command_get_time_zone('flashair')
     assert exc.value.args[0] == expected
+
+
+@pytest.mark.httpretty
+@pytest.mark.parametrize('bad', [True, False])
+def test_upload_ftime_updir_writeprotect(bad):
+    """Test upload_ftime_updir_writeprotect().
+
+    :param bool bad: Test exception.
+    """
+    httpretty.register_uri(httpretty.GET, 'http://flashair/upload.cgi', body='', status=400 if bad else 200)
+
+    if not bad:
+        return api.upload_ftime_updir_writeprotect('flashair', '/MUSIC', '0x483f9341')
+
+    with pytest.raises(exceptions.FlashAirHTTPError):
+        api.upload_ftime_updir_writeprotect('flashair', '/MUSIC', '0x483f9341')
+
+
+@pytest.mark.httpretty
+@pytest.mark.parametrize('bad', [True, False])
+def test_upload_upload_file(bad):
+    """Test upload_upload_file().
+
+    :param bool bad: Test exception.
+    """
+    httpretty.register_uri(httpretty.POST, 'http://flashair/upload.cgi', body='', status=400 if bad else 200)
+
+    if not bad:
+        return api.upload_upload_file('flashair', 'file.mp3', HERE.join('1khz_sine.mp3').open(mode='rb'))
+
+    with pytest.raises(exceptions.FlashAirHTTPError):
+        api.upload_upload_file('flashair', 'file.mp3', HERE.join('1khz_sine.mp3').open(mode='rb'))

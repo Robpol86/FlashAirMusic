@@ -7,7 +7,7 @@ import re
 from flash_air_music import exceptions
 from flash_air_music.upload import api
 
-REMOTE_ROOT_DIRECTORY = '/MUSIC'
+REMOTE_ROOT_DIRECTORY = '/MUSIC'  # Must not be more than 1 level deep due to API constraints and my laziness.
 
 
 def ftime_to_epoch(fdate, ftime, tzinfo):
