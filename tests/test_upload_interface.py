@@ -7,6 +7,7 @@ import pytest
 
 from flash_air_music import exceptions
 from flash_air_music.upload import api, interface
+from tests import HERE
 
 TZINFO = datetime.timezone(datetime.timedelta(hours=-8))  # Tests are written with Pacific Time in mind.
 
@@ -349,3 +350,25 @@ def test_initialize_upload(monkeypatch, mode):
 
     with pytest.raises(exceptions.FlashAirBadResponse):
         interface.initialize_upload('flashair', TZINFO)
+
+
+def test_upload_files(monkeypatch):
+    """Test upload_files().
+
+    :param monkeypatch: pytest fixture.
+    :return:
+    """
+    upload, execute = list(), list()
+    monkeypatch.setattr(api, 'upload_upload_file', lambda *args: upload.append(args[-1].name))
+    monkeypatch.setattr(api, 'lua_script_execute', lambda *args: execute.append(args[-1]))
+
+    files_attrs = [
+        (str(HERE.join('1khz_sine.mp3')), '/MUSIC/song.mp3', 1454388430),
+    ]
+    interface.upload_files('flashair', files_attrs)
+
+    actual = list(zip(upload, execute))
+    expected = [
+        (str(HERE.join('1khz_sine.mp3')), '_fam_staged.bin 1454388430 /MUSIC/song.mp3'),
+    ]
+    assert actual == expected

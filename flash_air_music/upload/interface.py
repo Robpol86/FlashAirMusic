@@ -10,6 +10,7 @@ from flash_air_music.upload import api
 
 LUA_HELPER_SCRIPT = os.path.join(os.path.dirname(__file__), '_fam_move_touch.lua')
 REMOTE_ROOT_DIRECTORY = '/MUSIC'  # Must not be more than 1 level deep due to API constraints and my laziness.
+UPLOAD_STAGE_NAME = '_fam_staged.bin'
 
 
 def datetime_to_ftime(tzinfo):
@@ -164,3 +165,26 @@ def initialize_upload(ip_addr, tzinfo):
     if '{},{}'.format(os.path.basename(LUA_HELPER_SCRIPT), os.stat(LUA_HELPER_SCRIPT).st_size) not in text:
         log.error('Lua script upload failed!')
         raise exceptions.FlashAirBadResponse(text, None)
+
+
+def upload_files(ip_addr, files_attrs):
+    """Upload files to the card one at a time.
+
+    Each item in the `files_attrs` list is a tuple of:
+        1. Absolute source file path on this machine.
+        2. Absolute destination file path on the FlashAir card.
+        3. mtime of the file in seconds since epoch.
+
+    :param str ip_addr: IP address of FlashAir to connect to.
+    :param iter files_attrs: List of tuples about files and how to upload them.
+    """
+    log = logging.getLogger(__name__)
+    script_path = '{}/{}'.format(REMOTE_ROOT_DIRECTORY, os.path.basename(LUA_HELPER_SCRIPT))
+
+    for source, destination, mtime in files_attrs:
+        log.info('Uploading to %s/%s', REMOTE_ROOT_DIRECTORY, UPLOAD_STAGE_NAME)
+        with open(source, mode='rb') as handle:
+            api.upload_upload_file(ip_addr, UPLOAD_STAGE_NAME, handle)
+        log.info('Moving to %s and setting mtime %d', destination, mtime)
+        script_argv = '{} {} {}'.format(UPLOAD_STAGE_NAME, mtime, destination)
+        api.lua_script_execute(ip_addr, script_path, script_argv)
