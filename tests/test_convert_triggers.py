@@ -6,7 +6,7 @@ import signal
 import pytest
 
 from flash_air_music.__main__ import shutdown
-from flash_air_music.convert.periodicals import periodically_convert, watch_directory
+from flash_air_music.convert.triggers import periodically_convert, watch_directory
 
 
 @asyncio.coroutine
@@ -89,7 +89,7 @@ def test_periodically_convert(monkeypatch, tmpdir, caplog, mode):
         '--threads': '2',
         '--working-dir': str(tmpdir),
     }
-    monkeypatch.setattr('flash_air_music.convert.periodicals.EVERY_SECONDS_PERIODIC', 1)
+    monkeypatch.setattr('flash_air_music.convert.triggers.EVERY_SECONDS_PERIODIC', 1)
     monkeypatch.setattr('flash_air_music.convert.run.GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr('flash_air_music.convert.transcode.GLOBAL_MUTABLE_CONFIG', config)
     loop = asyncio.get_event_loop()
@@ -122,8 +122,8 @@ def test_watch_directory(monkeypatch, tmpdir, caplog):
     tmpdir.ensure_dir('subdir').join('song3.mp3').write('\x00\x00')
     tmpdir.ensure_dir('subdir', 'subdir2').join('song4.mp3').write('\x00\x00\x00')
 
-    monkeypatch.setattr('flash_air_music.convert.periodicals.EVERY_SECONDS_WATCH', 1)
-    monkeypatch.setattr('flash_air_music.convert.periodicals.GLOBAL_MUTABLE_CONFIG', {'--music-source': str(tmpdir)})
+    monkeypatch.setattr('flash_air_music.convert.triggers.EVERY_SECONDS_WATCH', 1)
+    monkeypatch.setattr('flash_air_music.convert.triggers.GLOBAL_MUTABLE_CONFIG', {'--music-source': str(tmpdir)})
     monkeypatch.setattr('flash_air_music.convert.run.scan_wait', asyncio.coroutine(lambda: (None, None, None)))
     loop = asyncio.get_event_loop()
     semaphore = asyncio.Semaphore()

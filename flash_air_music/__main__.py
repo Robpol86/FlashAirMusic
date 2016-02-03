@@ -28,7 +28,7 @@ import signal
 import sys
 
 from flash_air_music.configuration import initialize_config, SIGNALS_INT_TO_NAME, update_config
-from flash_air_music.convert.periodicals import EVERY_SECONDS_PERIODIC, periodically_convert, watch_directory
+from flash_air_music.convert.triggers import EVERY_SECONDS_PERIODIC, periodically_convert, watch_directory
 from flash_air_music.exceptions import BaseError
 
 
