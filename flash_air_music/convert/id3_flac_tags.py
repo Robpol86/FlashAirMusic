@@ -75,13 +75,13 @@ def write_stored_metadata(song):
     except ID3NoHeaderError:
         log.error('Corrupted mp3 file: %s', song.target)
         raise CorruptedTargetFile
-    song.refresh_current_metadata()
+    song.refresh_live_metadata()
 
     # Write comment.
     id3 = ID3(song.target)
-    id3.add(COMM(desc=COMMENT_DESCRIPTION, encoding=3, lang='eng', text=json.dumps(song.current_metadata)))
+    id3.add(COMM(desc=COMMENT_DESCRIPTION, encoding=3, lang='eng', text=json.dumps(song.live_metadata)))
     id3.save()
 
     # Restore mtime.
-    mtime = song.current_metadata['target_mtime']
+    mtime = song.live_metadata['target_mtime']
     os.utime(song.target, (time.time(), mtime))

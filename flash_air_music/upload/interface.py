@@ -122,6 +122,8 @@ def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
 def delete_files_dirs(ip_addr, paths):
     """Delete files and directories on the FlashAir card.
 
+    :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+
     :param str ip_addr: IP address of FlashAir to connect to.
     :param iter paths: List of file/dir paths to remove.
     """
@@ -140,6 +142,7 @@ def initialize_upload(ip_addr, tzinfo):
 
     :raise FlashAirBadResponse: When API returns unexpected/malformed data.
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirURLTooLong: When the queried directory path is too long.
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param datetime.timezone tzinfo: Timezone the card is set to.
@@ -174,6 +177,8 @@ def upload_files(ip_addr, files_attrs):
         1. Absolute source file path on this machine.
         2. Absolute destination file path on the FlashAir card.
         3. mtime of the file in seconds since epoch.
+
+    :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param iter files_attrs: List of tuples about files and how to upload them.

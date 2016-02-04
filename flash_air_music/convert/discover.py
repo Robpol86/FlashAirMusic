@@ -13,31 +13,48 @@ VALID_SOURCE_EXTENSIONS = ('.flac', '.mp3')
 class Song(object):
     """Holds information about one song. Handles source/destination file paths.
 
+    :ivar dict live_metadata: Current metadata of source and target files.
     :ivar str source: Source file path (usually FLAC file).
+    :ivar dict stored_metadata: Previously recorded metadata of source and target files stored in target file ID3 tag.
     :ivar str target: Target file path (mp3 file).
-    :ivar dict previous_metadata: Previously recorded metadata of source and target files stored in target file ID3 tag.
-    :ivar dict current_metadata: Current metadata of source and target files.
     """
 
     def __init__(self, source, source_dir, target_dir):
-        """Constructor."""
+        """Constructor.
+
+        :param str source: Absolute source file path.
+        :param str source_dir: Root absolute source directory path.
+        :param str target_dir: Root absolute target directory path.
+        """
+        self.live_metadata = dict()
         self.source = source
-
-        # Determine target path.
-        target_path_old_extension = os.path.join(target_dir, os.path.relpath(source, source_dir))
-        self.target = os.path.splitext(target_path_old_extension)[0] + '.mp3'
-
-        # Read previous metadata from target file.
-        self.previous_metadata = read_stored_metadata(self.target)
-        self.current_metadata = dict()
-        self.refresh_current_metadata()
+        self.stored_metadata = dict()
+        self.target = self._generate_target_path(source_dir, target_dir)
+        self.refresh_live_metadata()
+        self._refresh_stored_metadata()
 
     def __repr__(self):
         """repr() handler."""
-        return '<{} name={} changed={} needs_conversion={}>'.format(
+        return '<{} name={} changed={} needs_action={}>'.format(
             self.__class__.__name__,
-            self.name, self.changed, self.needs_conversion,
+            self.name, self.changed, self.needs_action
         )
+
+    def _generate_target_path(self, source_dir, target_dir):
+        """Generate self.target value.
+
+        :param str source_dir: Root absolute source directory path.
+        :param str target_dir: Root absolute target directory path.
+
+        :return: Absolute target file path.
+        :rtype: str
+        """
+        target_path_old_extension = os.path.join(target_dir, os.path.relpath(self.source, source_dir))
+        return os.path.splitext(target_path_old_extension)[0] + '.mp3'
+
+    def _refresh_stored_metadata(self):
+        """Read metadata from long term storage location."""
+        self.stored_metadata.update(read_stored_metadata(self.target))
 
     @property
     def changed(self):
@@ -45,7 +62,7 @@ class Song(object):
         source_stat = os.stat(self.source)
         mtime = int(source_stat.st_mtime)
         size = int(source_stat.st_size)
-        return self.current_metadata['source_mtime'] != mtime or self.current_metadata['source_size'] != size
+        return self.live_metadata['source_mtime'] != mtime or self.live_metadata['source_size'] != size
 
     @property
     def name(self):
@@ -53,22 +70,22 @@ class Song(object):
         return os.path.basename(self.source)
 
     @property
-    def needs_conversion(self):
+    def needs_action(self):
         """Skip file if nothing has changed."""
-        return self.previous_metadata != self.current_metadata
+        return self.live_metadata != self.stored_metadata
 
-    def refresh_current_metadata(self):
+    def refresh_live_metadata(self):
         """Read current file metadata of source and target file."""
         source_stat = os.stat(self.source)
-        self.current_metadata['source_mtime'] = int(source_stat.st_mtime)
-        self.current_metadata['source_size'] = int(source_stat.st_size)
+        self.live_metadata['source_mtime'] = int(source_stat.st_mtime)
+        self.live_metadata['source_size'] = int(source_stat.st_size)
         try:
             target_stat = os.stat(self.target)
-            self.current_metadata['target_mtime'] = int(target_stat.st_mtime)
-            self.current_metadata['target_size'] = int(target_stat.st_size)
+            self.live_metadata['target_mtime'] = int(target_stat.st_mtime)
+            self.live_metadata['target_size'] = int(target_stat.st_size)
         except FileNotFoundError:
-            self.current_metadata['target_mtime'] = 0
-            self.current_metadata['target_size'] = 0
+            self.live_metadata['target_mtime'] = 0
+            self.live_metadata['target_size'] = 0
 
 
 def walk_source(source_dir):
@@ -100,7 +117,7 @@ def get_songs(source_dir, target_dir):
     for path in walk_source(source_dir):
         song = Song(path, source_dir, target_dir)
         valid_targets.append(song.target)
-        if song.needs_conversion:
+        if song.needs_action:
             songs.append(song)
 
     return songs, valid_targets

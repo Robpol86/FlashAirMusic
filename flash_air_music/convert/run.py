@@ -38,7 +38,7 @@ def scan_wait():
             break
         for song in changed:
             log.debug('Size/mtime changed for %s', song.source)
-            song.refresh_current_metadata()
+            song.refresh_live_metadata()
         log.info('%d song%s still being written to, waiting %f second%s...',
                  len(changed), '' if len(changed) == 1 else 's',
                  CHANGE_WAIT, '' if CHANGE_WAIT == 1 else 's')

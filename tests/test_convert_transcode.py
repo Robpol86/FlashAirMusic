@@ -28,7 +28,7 @@ def test_convert_file_success(monkeypatch, tmpdir, caplog):
     target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
     song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
-    assert song.needs_conversion is True
+    assert song.needs_action is True
 
     # Run.
     loop = asyncio.get_event_loop()
@@ -38,7 +38,7 @@ def test_convert_file_success(monkeypatch, tmpdir, caplog):
     # Verify.
     assert exit_status == 0
     assert target_dir.join('song1.mp3').check(file=True)
-    assert Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir)).needs_conversion is False
+    assert Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir)).needs_action is False
 
     # Verify log.
     command_str = str(command)
@@ -72,7 +72,7 @@ def test_convert_file_failure(monkeypatch, tmpdir, caplog, delete):
     if delete:
         HERE.join('1khz_sine.mp3').copy(target_dir.join('song1.mp3'))
     song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
-    assert song.needs_conversion is True
+    assert song.needs_action is True
 
     # Run.
     loop = asyncio.get_event_loop()
@@ -82,7 +82,7 @@ def test_convert_file_failure(monkeypatch, tmpdir, caplog, delete):
     # Verify.
     assert exit_status == 1
     assert not target_dir.join('song1.mp3').check(file=True)
-    assert Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir)).needs_conversion is True
+    assert Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir)).needs_action is True
 
     # Verify log.
     command_str = str(command)
@@ -127,7 +127,7 @@ def test_convert_file_deadlock(monkeypatch, tmpdir, caplog):
     # Verify.
     assert exit_status == 0
     assert target_dir.join('song1.mp3').check(file=True)
-    assert Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir)).needs_conversion is False
+    assert Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir)).needs_action is False
 
     # Verify log.
     command_str = str(command)

@@ -11,6 +11,30 @@ import requests
 from flash_air_music import exceptions
 
 
+def requests_get_post(url, stream=None, file_name=None):
+    """Perform a GET or POST request.
+
+    :param str url: URL to query.
+    :param file stream: Data to POST/upload. If None then this will do a GET request.
+    :param str file_name: Remote file name (not path) to upload as.
+
+    :return: Response object.
+    :rtype: requests.models.Response
+    """
+    log = logging.getLogger(__name__)
+
+    if stream is None:
+        log.debug('Querying url %s', url)
+        response = requests.get(url, timeout=5)
+    else:
+        log.debug('POSTing to %s', url)
+        response = requests.post(url, files={'file': (file_name, stream)}, timeout=5)
+
+    log.debug('Response code: %d', response.status_code)
+    log.debug('Response text: %s', response.text)
+    return response
+
+
 def command_get_file_list(ip_addr, directory):
     """command.cgi?op=100: Get list of files in a directory. Not recursive.
 
@@ -25,14 +49,10 @@ def command_get_file_list(ip_addr, directory):
     :return: Unprocessed text response.
     :rtype: str
     """
-    log = logging.getLogger(__name__)
     url = 'http://{}/command.cgi?op=100&DIR={}'.format(ip_addr, urllib.parse.quote(directory))
 
     # Hit API.
-    log.debug('Querying url %s', url)
-    response = requests.get(url)
-    log.debug('Response code: %d', response.status_code)
-    log.debug('Response text: %s', response.text)
+    response = requests_get_post(url)
     if response.status_code == 404:
         raise exceptions.FlashAirDirNotFoundError(directory, response)
     if not response.ok:
@@ -57,14 +77,10 @@ def command_get_time_zone(ip_addr):
     :return: 15-minute offset count from UTC.
     :rtype: int
     """
-    log = logging.getLogger(__name__)
     url = 'http://{}/command.cgi?op=221'.format(ip_addr)
 
     # Hit API.
-    log.debug('Querying url %s', url)
-    response = requests.get(url)
-    log.debug('Response code: %d', response.status_code)
-    log.debug('Response text: %s', response.text)
+    response = requests_get_post(url)
     if not response.ok:
         raise exceptions.FlashAirHTTPError(response.status_code, response)
 
@@ -78,6 +94,8 @@ def command_get_time_zone(ip_addr):
 def lua_script_execute(ip_addr, script_path, argv):
     """Execute Lua script over HTTP.
 
+    :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+
     :param str ip_addr: IP address of FlashAir to connect to.
     :param str script_path: Remote path to Lua script.
     :param str argv: URL-compatible arguments to pass to script.
@@ -85,17 +103,10 @@ def lua_script_execute(ip_addr, script_path, argv):
     :return: Unprocessed text response.
     :rtype: str
     """
-    log = logging.getLogger(__name__)
     url = 'http://{}/{}?{}'.format(ip_addr, script_path.strip('/'), urllib.parse.quote(argv))
-
-    # Hit API.
-    log.debug('Querying url %s', url)
-    response = requests.get(url)
-    log.debug('Response code: %d', response.status_code)
-    log.debug('Response text: %s', response.text)
+    response = requests_get_post(url)
     if not response.ok:
         raise exceptions.FlashAirHTTPError(response.status_code, response)
-
     return response.text
 
 
@@ -104,17 +115,13 @@ def upload_delete(ip_addr, path):
 
     Not recursive. Delete responsibly to avoid orphaning children.
 
+    :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+
     :param str ip_addr: IP address of FlashAir to connect to.
     :param str path: Remote path to delete.
     """
-    log = logging.getLogger(__name__)
     url = 'http://{}/upload.cgi?DEL={}'.format(ip_addr, path)
-
-    # Hit API.
-    log.debug('Querying url %s', url)
-    response = requests.get(url)
-    log.debug('Response code: %d', response.status_code)
-    log.debug('Response text: %s', response.text)
+    response = requests_get_post(url)
     if not response.ok:
         raise exceptions.FlashAirHTTPError(response.status_code, response)
 
@@ -129,18 +136,14 @@ def upload_ftime_updir_writeprotect(ip_addr, directory, ftime):
     Setting write protect prevents host devices from writing to the card while files are being written to it over the
     HTTP API. Card will need to be cycled to undo the host lock.
 
+    :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+
     :param str ip_addr: IP address of FlashAir to connect to.
     :param str directory: Remote directory to upload files to.
     :param str ftime: Current FILETIME as a 32bit hex number.
     """
-    log = logging.getLogger(__name__)
     url = 'http://{}/upload.cgi?FTIME={}&UPDIR={}&WRITEPROTECT=ON'.format(ip_addr, ftime, directory)
-
-    # Hit API.
-    log.debug('Querying url %s', url)
-    response = requests.get(url)
-    log.debug('Response code: %d', response.status_code)
-    log.debug('Response text: %s', response.text)
+    response = requests_get_post(url)
     if not response.ok:
         raise exceptions.FlashAirHTTPError(response.status_code, response)
 
@@ -150,17 +153,13 @@ def upload_upload_file(ip_addr, file_name, handle):
 
     File mtime is set to the current time. No way around it.
 
+    :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+
     :param str ip_addr: IP address of FlashAir to connect to.
     :param file_name: File name to write to on the card in UPDIR.
     :param handle: Opened file handle (binary mode) to stream from.
     """
-    log = logging.getLogger(__name__)
     url = 'http://{}/upload.cgi'.format(ip_addr)
-
-    # POST the file.
-    log.debug('POSTing to %s', url)
-    response = requests.post(url, files={'file': (file_name, handle)})
-    log.debug('Response code: %d', response.status_code)
-    log.debug('Response text: %s', response.text)
+    response = requests_get_post(url, handle, file_name)
     if not response.ok:
         raise exceptions.FlashAirHTTPError(response.status_code, response)

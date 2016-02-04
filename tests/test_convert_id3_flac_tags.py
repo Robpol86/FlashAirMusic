@@ -80,9 +80,9 @@ def test_write_stored_metadata(tmpdir, caplog):
     # Run.
     HERE.join('1khz_sine.mp3').copy(source_file)
     HERE.join('1khz_sine.mp3').copy(target_file)
-    assert song.needs_conversion is True
+    assert song.needs_action is True
     id3_flac_tags.write_stored_metadata(song)
 
     # Verify.
     song = Song(str(source_file), source_file.dirname, target_file.dirname)
-    assert song.needs_conversion is False
+    assert song.needs_action is False
