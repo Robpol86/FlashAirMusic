@@ -21,6 +21,10 @@ class FlashAirDirNotFoundError(FlashAirError):
     """Directory not found on card."""
 
 
+class FlashAirNetworkError(FlashAirError):
+    """Network error while talking to API. Not protocol error."""
+
+
 class FlashAirHTTPError(FlashAirError):
     """API returned non-200 status code."""
 

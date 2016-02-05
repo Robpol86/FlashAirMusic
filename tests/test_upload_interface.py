@@ -29,7 +29,7 @@ def test_get_files_empty_root(monkeypatch):
     """
     monkeypatch.setattr(api, 'command_get_file_list', lambda *_: 'WLANSD_FILELIST\r\n')
     actual = interface.get_files('flashair', TZINFO)
-    expected = list(), ['/MUSIC']
+    expected = dict(), ['/MUSIC']
     assert actual == expected
 
 
@@ -43,10 +43,10 @@ def test_get_files_simple(monkeypatch, mode):
     # Setup responses and expectations.
     if mode == 'ignore':
         body = 'WLANSD_FILELIST\r\n/MUSIC,ignore.dat,7734072,32,18062,43980\r\n'
-        expected = list(), list()
+        expected = dict(), list()
     elif mode == 'one':
         body = 'WLANSD_FILELIST\r\n/MUSIC,song.mp3,7733944,32,18494,28729\r\n'
-        expected = [('/MUSIC/song.mp3', 7733944, 1454191310)], list()
+        expected = {'/MUSIC/song.mp3': (7733944, 1454191310)}, list()
     else:
         if mode == 'two':
             body = ('WLANSD_FILELIST\r\n'
@@ -58,7 +58,7 @@ def test_get_files_simple(monkeypatch, mode):
                     '/MUSIC,09 - Half-Penny, Two-Penny.mp3,11704554,32,17800,622\r\n'
                     '/MUSIC,Rick James - 1981 - Street Songs - 05 - Super Freak.flac,22578069,32,16771,33703\r\n')
         expected = (
-            [('/MUSIC/song.mp3', 7733944, 1454191310), ('/MUSIC/09 - Half-Penny, Two-Penny.mp3', 11704554, 1418026768)],
+            {'/MUSIC/song.mp3': (7733944, 1454191310), '/MUSIC/09 - Half-Penny, Two-Penny.mp3': (11704554, 1418026768)},
             list()
         )
     monkeypatch.setattr(api, 'command_get_file_list', lambda *_: body)
@@ -98,10 +98,10 @@ def test_get_files_recursive(monkeypatch):
     # Run.
     actual = interface.get_files('flashair', TZINFO)
     expected = (
-        [
-            ('/MUSIC/04 Slip.mp3', 11869064, 1247280790),
-            ('/MUSIC/more music/02 - Rockin\' the Paradise.mp3', 7077241, 1418026764),
-        ],
+        {
+            '/MUSIC/04 Slip.mp3': (11869064, 1247280790),
+            "/MUSIC/more music/02 - Rockin' the Paradise.mp3": (7077241, 1418026764),
+        },
         ['/MUSIC/empty']
     )
     assert actual == expected
@@ -153,17 +153,17 @@ def test_get_files_long_file_names(monkeypatch, caplog):
     # Run.
     actual = interface.get_files('flashair', TZINFO)
     expected = (
-        [
+        {
             ('/MUSIC/Bacon ipsum dolor amet corned beef fatback bresaola meatloaf, landjaeger ham hock t-bone ground ro'
-             'und short ribs cupim ham doner swine pig..MP3', 11869064, 1247280790),
-            ('/MUSIC/TENDER~1.DON/song1.MP3', 11869064, 1247280790),
-            ('/MUSIC/GROUND~1.DRU/song1.MP3', 11869064, 1247280790),
+             'und short ribs cupim ham doner swine pig..MP3'): (11869064, 1247280790),
+            '/MUSIC/TENDER~1.DON/song1.MP3': (11869064, 1247280790),
+            '/MUSIC/GROUND~1.DRU/song1.MP3': (11869064, 1247280790),
             ('/MUSIC/Ribeye leberkas beef ribs doner capicola shankle swine short ribs fatback alcatra shoulder pork be'
              'lly meatball picanha. Pork belly pancetta t-bone tail. Filet mignon pork chop chicken andouille, tongue r'
              'ump tri-tip turducken spare ribs ball tip. Tai/Bacon ipsum dolor amet corned beef fatback bresaola meatlo'
-             'af, landjaeger ham hock t-bone ground round short ribs cupim ham doner swine pig..MP3',
-             11869064, 1247280790),
-        ],
+             'af, landjaeger ham hock t-bone ground round short ribs cupim ham doner swine pig..MP3'):
+            (11869064, 1247280790),
+        },
         list()
     )
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
@@ -250,36 +250,36 @@ def test_get_files_special_characters(monkeypatch, caplog):
     # Run.
     actual = interface.get_files('flashair', TZINFO)
     expected = (
-        [
-            ('/MUSIC/~/s.mp3', 11869064, 1247280790),
-            ('/MUSIC/`/l.mp3', 11869064, 1247280790),
-            ('/MUSIC/!/5.mp3', 11869064, 1247280790),
-            ('/MUSIC/@/e.mp3', 11869064, 1247280790),
-            ('/MUSIC/#/j.mp3', 11869064, 1247280790),
-            ('/MUSIC/$/t.mp3', 11869064, 1247280790),
-            ('/MUSIC/%/k.mp3', 11869064, 1247280790),
-            ('/MUSIC/^/m.mp3', 11869064, 1247280790),
-            ('/MUSIC/~1/f.mp3', 11869064, 1247280790),
-            ('/MUSIC/(/9.mp3', 11869064, 1247280790),
-            ('/MUSIC/)/a.mp3', 11869064, 1247280790),
-            ('/MUSIC/_/1.mp3', 11869064, 1247280790),
-            ('/MUSIC/-/2.mp3', 11869064, 1247280790),
-            ('/MUSIC/+/n.mp3', 11869064, 1247280790),
-            ('/MUSIC/=/p.mp3', 11869064, 1247280790),
-            ('/MUSIC/{/c.mp3', 11869064, 1247280790),
-            ('/MUSIC/]/b.mp3', 11869064, 1247280790),
-            ('/MUSIC/}/d.mp3', 11869064, 1247280790),
-            ('/MUSIC/~~~~~~39/h.mp3', 11869064, 1247280790),
-            ('/MUSIC/~~~~~~41/r.mp3', 11869064, 1247280790),
-            ('/MUSIC/;/4.mp3', 11869064, 1247280790),
-            ("/MUSIC/'/7.mp3", 11869064, 1247280790),
-            ('/MUSIC/~~~~~~46/8.mp3', 11869064, 1247280790),
-            ('/MUSIC/,/3.mp3', 11869064, 1247280790),
-            ('/MUSIC/~~~~~~50/o.mp3', 11869064, 1247280790),
-            ('/MUSIC/~~~~~~52/q.mp3', 11869064, 1247280790),
-            ('/MUSIC/~~~~~~54/g.mp3', 11869064, 1247280790),
-            ('/MUSIC/~~~~~~56/6.mp3', 11869064, 1247280790)
-        ],
+        {
+            '/MUSIC/~/s.mp3': (11869064, 1247280790),
+            '/MUSIC/`/l.mp3': (11869064, 1247280790),
+            '/MUSIC/!/5.mp3': (11869064, 1247280790),
+            '/MUSIC/@/e.mp3': (11869064, 1247280790),
+            '/MUSIC/#/j.mp3': (11869064, 1247280790),
+            '/MUSIC/$/t.mp3': (11869064, 1247280790),
+            '/MUSIC/%/k.mp3': (11869064, 1247280790),
+            '/MUSIC/^/m.mp3': (11869064, 1247280790),
+            '/MUSIC/~1/f.mp3': (11869064, 1247280790),
+            '/MUSIC/(/9.mp3': (11869064, 1247280790),
+            '/MUSIC/)/a.mp3': (11869064, 1247280790),
+            '/MUSIC/_/1.mp3': (11869064, 1247280790),
+            '/MUSIC/-/2.mp3': (11869064, 1247280790),
+            '/MUSIC/+/n.mp3': (11869064, 1247280790),
+            '/MUSIC/=/p.mp3': (11869064, 1247280790),
+            '/MUSIC/{/c.mp3': (11869064, 1247280790),
+            '/MUSIC/]/b.mp3': (11869064, 1247280790),
+            '/MUSIC/}/d.mp3': (11869064, 1247280790),
+            '/MUSIC/~~~~~~39/h.mp3': (11869064, 1247280790),
+            '/MUSIC/~~~~~~41/r.mp3': (11869064, 1247280790),
+            '/MUSIC/;/4.mp3': (11869064, 1247280790),
+            "/MUSIC/'/7.mp3": (11869064, 1247280790),
+            '/MUSIC/~~~~~~46/8.mp3': (11869064, 1247280790),
+            '/MUSIC/,/3.mp3': (11869064, 1247280790),
+            '/MUSIC/~~~~~~50/o.mp3': (11869064, 1247280790),
+            '/MUSIC/~~~~~~52/q.mp3': (11869064, 1247280790),
+            '/MUSIC/~~~~~~54/g.mp3': (11869064, 1247280790),
+            '/MUSIC/~~~~~~56/6.mp3': (11869064, 1247280790),
+        },
         list()
     )
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]

@@ -107,7 +107,8 @@ def get_songs(source_dir, target_dir):
     :param str source_dir: Source directory.
     :param str target_dir: Target directory.
 
-    :return: Song instances that need conversion and list of all mp3 targets targets that need or don't need conversion.
+    :return: Song instances that need conversion and list of all mp3 target files that need or don't need conversion.
+    :rtype: tuple
     """
     source_dir = os.path.realpath(source_dir)
     target_dir = os.path.realpath(target_dir)

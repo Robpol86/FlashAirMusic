@@ -1,13 +1,69 @@
 """Test functions in module."""
 
+import io
 import urllib.parse
 
 import httpretty
 import pytest
+import requests
 
 from flash_air_music import exceptions
 from flash_air_music.upload import api
 from tests import HERE
+
+
+@pytest.mark.httpretty
+@pytest.mark.parametrize('verbose', [True, False])
+@pytest.mark.parametrize('mode', ['Timeout', 'ConnectionError', 'GET', 'POST'])
+def test_requests_get_post(monkeypatch, caplog, mode, verbose):
+    """Test requests_get_post().
+
+    :param monkeypatch: pytest fixture.
+    :param caplog: pytest extension fixture.
+    :param str mode: Scenario to test for.
+    :param bool verbose: Test verbose logging.
+    """
+    url = 'http://flashair/test'
+    monkeypatch.setattr(api, 'GLOBAL_MUTABLE_CONFIG', {'--verbose': verbose})
+
+    # Setup responses.
+    if mode == 'GET':
+        httpretty.register_uri(httpretty.GET, url, body='OK')
+    elif mode == 'POST':
+        httpretty.register_uri(httpretty.POST, url, status=200)
+    else:
+        def func(*args, **kwargs):
+            """Raise exception."""
+            assert args
+            assert kwargs
+            if mode == 'Timeout':
+                raise requests.Timeout('Connection timed out.')
+            raise requests.ConnectionError('Connection error.')
+        monkeypatch.setattr('requests.get', func)
+
+    # Test good.
+    if mode == 'POST':
+        actual = api.requests_get_post(url, io.StringIO('data'), 'data.txt')
+        assert actual.status_code == 200
+        return
+    if mode == 'GET':
+        actual = api.requests_get_post(url)
+        assert actual.status_code == 200
+        assert actual.text == 'OK'
+        return
+
+    # Test exceptions.
+    with pytest.raises(exceptions.FlashAirNetworkError) as exc:
+        api.requests_get_post(url)
+    messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
+    if mode == 'Timeout':
+        assert exc.value.args[0] == 'Timed out reaching flashair'
+    else:
+        assert exc.value.args[0] == 'Unable to connect to flashair'
+    if verbose:
+        assert 'Handled exception:' in messages
+    else:
+        assert 'Handled exception:' not in messages
 
 
 @pytest.mark.httpretty

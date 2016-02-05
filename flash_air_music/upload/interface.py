@@ -59,6 +59,7 @@ def get_card_time_zone(ip_addr):
 
     :raise FlashAirBadResponse: When API returns unexpected/malformed data.
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
 
     :param str ip_addr: IP address of FlashAir to connect to.
 
@@ -81,13 +82,14 @@ def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
     :raise FlashAirBadResponse: When API returns unexpected/malformed data.
     :raise FlashAirDirNotFoundError: When the queried directory does not exist on the card.
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
     :raise FlashAirURLTooLong: When the queried directory path is too long.
 
     :param str ip_addr: IP address of FlashAir to connect to.
-    :param str directory: Remote directory to get file list from.
     :param datetime.timezone tzinfo: Timezone the card is set to.
+    :param str directory: Remote directory to get file list from.
 
-    :return: Files (list of 3-item tuples [absolute file path, file size, mtime]) and list of empty dirs.
+    :return: Files dict ({file path: (file size, mtime)}) and list of empty dirs.
     :rtype: tuple
     """
     log = logging.getLogger(__name__)
@@ -96,10 +98,10 @@ def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
     # Query API.
     response_text = api.command_get_file_list(ip_addr, directory)
     if response_text.count('\n') <= 1:
-        return list(), [directory]  # No files in directory.
+        return dict(), [directory]  # No files in directory.
 
     # Parse response.
-    files, empty_dirs = list(), list()
+    files, empty_dirs = dict(), list()
     regex = re.compile(r'^.{%d},(.+?),(\d+),(\d+),(\d+),(\d+)$' % len(directory), re.MULTILINE)
     for name, size, attr, fdate, ftime in (i.groups() for i in regex.finditer(response_text.replace('\r', ''))):
         if int(attr) & 16:  # Handle directory.
@@ -111,10 +113,10 @@ def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
             except exceptions.FlashAirError:
                 log.warning('Unable to handle special characters in directory name: %s', name)
                 continue
-            files.extend(subdir[0])
+            files.update(subdir[0])
             empty_dirs.extend(subdir[1])
         elif name.lower().endswith('.mp3'):
-            files.append(('{}/{}'.format(directory, name), int(size), ftime_to_epoch(int(fdate), int(ftime), tzinfo)))
+            files['{}/{}'.format(directory, name)] = (int(size), ftime_to_epoch(int(fdate), int(ftime), tzinfo))
 
     return files, empty_dirs
 
@@ -123,6 +125,7 @@ def delete_files_dirs(ip_addr, paths):
     """Delete files and directories on the FlashAir card.
 
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param iter paths: List of file/dir paths to remove.
@@ -142,6 +145,7 @@ def initialize_upload(ip_addr, tzinfo):
 
     :raise FlashAirBadResponse: When API returns unexpected/malformed data.
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
     :raise FlashAirURLTooLong: When the queried directory path is too long.
 
     :param str ip_addr: IP address of FlashAir to connect to.
@@ -179,6 +183,7 @@ def upload_files(ip_addr, files_attrs):
         3. mtime of the file in seconds since epoch.
 
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param iter files_attrs: List of tuples about files and how to upload them.

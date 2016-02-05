@@ -9,10 +9,13 @@ import urllib.parse
 import requests
 
 from flash_air_music import exceptions
+from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
 
 
 def requests_get_post(url, stream=None, file_name=None):
     """Perform a GET or POST request.
+
+    :raise FlashAirNetworkError: When unable to reach API or connection timeout.
 
     :param str url: URL to query.
     :param file stream: Data to POST/upload. If None then this will do a GET request.
@@ -23,12 +26,21 @@ def requests_get_post(url, stream=None, file_name=None):
     """
     log = logging.getLogger(__name__)
 
-    if stream is None:
-        log.debug('Querying url %s', url)
-        response = requests.get(url, timeout=5)
-    else:
-        log.debug('POSTing to %s', url)
-        response = requests.post(url, files={'file': (file_name, stream)}, timeout=5)
+    try:
+        if stream is None:
+            log.debug('Querying url %s', url)
+            response = requests.get(url, timeout=5)
+        else:
+            log.debug('POSTing to %s', url)
+            response = requests.post(url, files={'file': (file_name, stream)}, timeout=5)
+    except requests.Timeout:
+        if GLOBAL_MUTABLE_CONFIG['--verbose']:
+            log.exception('Handled exception:')
+        raise exceptions.FlashAirNetworkError('Timed out reaching {}'.format(urllib.parse.urlsplit(url).netloc))
+    except requests.ConnectionError:
+        if GLOBAL_MUTABLE_CONFIG['--verbose']:
+            log.exception('Handled exception:')
+        raise exceptions.FlashAirNetworkError('Unable to connect to {}'.format(urllib.parse.urlsplit(url).netloc))
 
     log.debug('Response code: %d', response.status_code)
     log.debug('Response text: %s', response.text)
@@ -41,6 +53,7 @@ def command_get_file_list(ip_addr, directory):
     :raise FlashAirBadResponse: When API returns unexpected/malformed data.
     :raise FlashAirDirNotFoundError: When the queried directory does not exist on the card.
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
     :raise FlashAirURLTooLong: When the queried directory path is too long.
 
     :param str ip_addr: IP address of FlashAir to connect to.
@@ -71,6 +84,7 @@ def command_get_time_zone(ip_addr):
 
     :raise FlashAirBadResponse: When API returns unexpected/malformed data.
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
 
     :param str ip_addr: IP address of FlashAir to connect to.
 
@@ -95,6 +109,7 @@ def lua_script_execute(ip_addr, script_path, argv):
     """Execute Lua script over HTTP.
 
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param str script_path: Remote path to Lua script.
@@ -116,6 +131,7 @@ def upload_delete(ip_addr, path):
     Not recursive. Delete responsibly to avoid orphaning children.
 
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param str path: Remote path to delete.
@@ -137,6 +153,7 @@ def upload_ftime_updir_writeprotect(ip_addr, directory, ftime):
     HTTP API. Card will need to be cycled to undo the host lock.
 
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param str directory: Remote directory to upload files to.
@@ -154,6 +171,7 @@ def upload_upload_file(ip_addr, file_name, handle):
     File mtime is set to the current time. No way around it.
 
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param file_name: File name to write to on the card in UPDIR.
