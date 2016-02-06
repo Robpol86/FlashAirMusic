@@ -46,7 +46,7 @@ def test_song(tmpdir, mode):
     assert song.source == str(source_file)
     assert song.target == str(target_file)
     assert song.needs_action is (False if mode == 'up to date' else True)
-    assert repr(song) == '<Song name=song.mp3 changed=False needs_action={}>'.format(song.needs_action)
+    assert repr(song) == '<Song name=song.mp3 needs_action={}>'.format(song.needs_action)
     assert song.changed is False
 
     # Test changed.

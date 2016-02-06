@@ -5,12 +5,13 @@ Target mp3 files hold source metadata in their ID3 comment tags. Each mp3 file i
 
 import os
 
+from flash_air_music.common.base_song import BaseSong
 from flash_air_music.convert.id3_flac_tags import read_stored_metadata
 
 VALID_SOURCE_EXTENSIONS = ('.flac', '.mp3')
 
 
-class Song(object):
+class Song(BaseSong):
     """Holds information about one song. Handles source/destination file paths.
 
     :ivar dict live_metadata: Current metadata of source and target files.
@@ -18,27 +19,6 @@ class Song(object):
     :ivar dict stored_metadata: Previously recorded metadata of source and target files stored in target file ID3 tag.
     :ivar str target: Target file path (mp3 file).
     """
-
-    def __init__(self, source, source_dir, target_dir):
-        """Constructor.
-
-        :param str source: Absolute source file path.
-        :param str source_dir: Root absolute source directory path.
-        :param str target_dir: Root absolute target directory path.
-        """
-        self.live_metadata = dict()
-        self.source = source
-        self.stored_metadata = dict()
-        self.target = self._generate_target_path(source_dir, target_dir)
-        self.refresh_live_metadata()
-        self._refresh_stored_metadata()
-
-    def __repr__(self):
-        """repr() handler."""
-        return '<{} name={} changed={} needs_action={}>'.format(
-            self.__class__.__name__,
-            self.name, self.changed, self.needs_action
-        )
 
     def _generate_target_path(self, source_dir, target_dir):
         """Generate self.target value.
@@ -64,21 +44,9 @@ class Song(object):
         size = int(source_stat.st_size)
         return self.live_metadata['source_mtime'] != mtime or self.live_metadata['source_size'] != size
 
-    @property
-    def name(self):
-        """Return basename of source file."""
-        return os.path.basename(self.source)
-
-    @property
-    def needs_action(self):
-        """Skip file if nothing has changed."""
-        return self.live_metadata != self.stored_metadata
-
     def refresh_live_metadata(self):
         """Read current file metadata of source and target file."""
-        source_stat = os.stat(self.source)
-        self.live_metadata['source_mtime'] = int(source_stat.st_mtime)
-        self.live_metadata['source_size'] = int(source_stat.st_size)
+        super().refresh_live_metadata()
         try:
             target_stat = os.stat(self.target)
             self.live_metadata['target_mtime'] = int(target_stat.st_mtime)

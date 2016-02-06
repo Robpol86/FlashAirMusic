@@ -1,15 +1,12 @@
 """Test functions in module."""
 
-import datetime
 import os
 
 import pytest
 
 from flash_air_music import exceptions
 from flash_air_music.upload import api, interface
-from tests import HERE
-
-TZINFO = datetime.timezone(datetime.timedelta(hours=-8))  # Tests are written with Pacific Time in mind.
+from tests import HERE, TZINFO
 
 
 def test_get_card_time_zone(monkeypatch):
