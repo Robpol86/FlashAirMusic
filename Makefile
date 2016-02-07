@@ -26,7 +26,7 @@ install:
 	dnf -qy remove $(NAME) || true
 	dnf -y install $(NAME)-$(VERSION)-*.rpm
 
-docker-rpmtest: install
+docker-rpmtest:
 	systemd-analyze verify $(NAME).service
 	rpmlint $(NAME)
 	$(NAME) --help
@@ -35,13 +35,15 @@ docker-rpmtest: install
 	test "$$(rpm -q $(NAME) --queryformat '%{URL}')" == "$(URL)"
 	test $$(rpm -q $(NAME) --queryformat '%{VERSION}') == "$(VERSION)"
 	test $$($(NAME) --version) == "$(VERSION)"
-	(cd /tests && su -m user -c "py.test-3 .")
 
-docker-build-image:
-	cat DockerfileTemplates/DockerfileFedora |envsubst > Dockerfile
-	docker build -t local/$(MODE) .
+docker-build:
+	cat DockerfileTemplates/DockerfileFedoraBuild |envsubst > Dockerfile
+	docker build -t build/$(MODE) .
+	docker run -v ${PWD}:/build build/$(MODE) make
+	cat DockerfileTemplates/DockerfileFedoraRun |envsubst > Dockerfile
+	docker build -t run/$(MODE) .
 	rm Dockerfile
 
-docker-run-all:
-	docker run -v ${PWD}:/build local/$(MODE) make
-	docker run -v ${PWD}:/build:ro -v ${PWD}/tests:/tests:ro local/$(MODE) make docker-rpmtest
+docker-run:
+	docker run -v ${PWD}:/build:ro run/$(MODE) make docker-rpmtest
+	docker run -v ${PWD}/tests:/build/tests:ro run/$(MODE) su -m user -c "py.test-3 tests"

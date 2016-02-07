@@ -1,0 +1,16 @@
+# $MODE, $NAME, and others are defined in .travis.yml and Makefile by envsubst.
+
+FROM build/$MODE
+MAINTAINER Robpol86 <robpol86@gmail.com>
+
+ADD $NAME-$VERSION-*.rpm /build/
+
+ENV LANG=en_US.utf8 LC_ALL=en_US.utf8
+
+RUN dnf install -y \
+    http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-23.noarch.rpm \
+    http://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-23.noarch.rpm \
+    python3-httpretty \
+    python3-pytest
+RUN dnf install -y $NAME-$VERSION-*.rpm
+RUN pip3 install pytest-catchlog pytest-httpretty
