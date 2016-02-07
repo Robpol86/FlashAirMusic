@@ -12,7 +12,7 @@ from docoptcfg import docoptcfg, DocoptcfgFileError
 from flash_air_music.exceptions import ConfigError
 from flash_air_music.setup_logging import setup_logging
 
-DEFAULT_FFMPEG_BINARY = find_executable('ffmpeg')
+FFMPEG_DEFAULT_BINARY = find_executable('ffmpeg')
 DEFAULT_WORKING_DIR = os.path.join(os.environ['HOME'], 'FlashAirMusicWorkingDir')
 SIGNALS_INT_TO_NAME = {v: {a for a, b in vars(signal).items() if a.startswith('SIG') and b == v}
                        for k, v in vars(signal).items() if k.startswith('SIG')}
@@ -28,10 +28,22 @@ def _get_arguments(doc):
     :return: Parsed options.
     :rtype: dict
     """
+    docstring = doc.format(program='FlashAirMusic')
     require = getattr(pkg_resources, 'require')  # Stupid linting error.
     project = [p for p in require('FlashAirMusic') if p.project_name == 'FlashAirMusic'][0]
     version = project.version
-    return docoptcfg(doc, config_option='--config', env_prefix='FAM_', version=version)
+    return docoptcfg(docstring, config_option='--config', env_prefix='FAM_', version=version)
+
+
+def _real_paths(config):
+    """Resolve relative paths in config to absolute/real paths.
+
+    :param dict config: Configuration dict to validate.
+    """
+    for key in ('--config', '--ffmpeg-bin', '--log', '--music-source', '--working-dir'):
+        if not config[key]:
+            continue
+        config[key] = os.path.realpath(os.path.expanduser(config[key]))
 
 
 def _validate_config(config):  # pylint:disable=too-many-branches
@@ -72,10 +84,10 @@ def _validate_config(config):  # pylint:disable=too-many-branches
     if not os.access(config['--working-dir'], os.R_OK | os.W_OK | os.X_OK):
         logging.getLogger(__name__).error('No access to working directory: %s', config['--working-dir'])
         raise ConfigError
-    if os.path.realpath(config['--working-dir']).startswith(os.path.realpath(config['--music-source'])):
+    if config['--working-dir'].startswith(config['--music-source']):
         logging.getLogger(__name__).error('Working directory cannot be in music source dir.')
         raise ConfigError
-    if os.path.realpath(config['--music-source']).startswith(os.path.realpath(config['--working-dir'])):
+    if config['--music-source'].startswith(config['--working-dir']):
         logging.getLogger(__name__).error('Music source dir cannot be in working directory.')
         raise ConfigError
 
@@ -118,9 +130,12 @@ def initialize_config(doc):
 
     # Set defaults.
     if not GLOBAL_MUTABLE_CONFIG['--ffmpeg-bin']:
-        GLOBAL_MUTABLE_CONFIG['--ffmpeg-bin'] = DEFAULT_FFMPEG_BINARY
+        GLOBAL_MUTABLE_CONFIG['--ffmpeg-bin'] = FFMPEG_DEFAULT_BINARY
     if not GLOBAL_MUTABLE_CONFIG['--working-dir']:
         GLOBAL_MUTABLE_CONFIG['--working-dir'] = DEFAULT_WORKING_DIR
+
+    # Resolve relative paths.
+    _real_paths(GLOBAL_MUTABLE_CONFIG)
 
     # Validate.
     _validate_config(GLOBAL_MUTABLE_CONFIG)
@@ -152,9 +167,12 @@ def update_config(doc, signum):
 
     # Set defaults.
     if not config['--ffmpeg-bin']:
-        config['--ffmpeg-bin'] = DEFAULT_FFMPEG_BINARY
+        config['--ffmpeg-bin'] = FFMPEG_DEFAULT_BINARY
     if not config['--working-dir']:
         config['--working-dir'] = DEFAULT_WORKING_DIR
+
+    # Resolve relative paths.
+    _real_paths(config)
 
     # Validate.
     try:

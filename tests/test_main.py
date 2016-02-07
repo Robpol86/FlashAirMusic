@@ -11,7 +11,7 @@ from textwrap import dedent
 
 import pytest
 
-from flash_air_music.configuration import DEFAULT_FFMPEG_BINARY
+from flash_air_music.configuration import FFMPEG_DEFAULT_BINARY
 from tests import HERE
 
 
@@ -38,7 +38,7 @@ def test_error(tmpdir):
     assert 'BUG!' not in stdout
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 def test_sighup(tmpdir):
     """Test config reloading.
 
@@ -95,7 +95,7 @@ def test_sighup(tmpdir):
     assert 'BUG!' not in stdout
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 def test_empty(tmpdir):
     """Test with no music to convert.
 
@@ -140,7 +140,7 @@ def test_empty(tmpdir):
     assert process.poll() == 0
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 def test_songs(tmpdir):
     """Test with a few music files.
 

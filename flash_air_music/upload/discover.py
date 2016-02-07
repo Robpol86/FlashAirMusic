@@ -4,7 +4,7 @@ import logging
 import os
 import unicodedata
 
-from flash_air_music.common.base_song import BaseSong
+from flash_air_music.base_song import BaseSong
 from flash_air_music.exceptions import FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
 from flash_air_music.upload.interface import DO_NOT_DELETE, get_files, REMOTE_ROOT_DIRECTORY
 
@@ -103,7 +103,6 @@ def get_songs(source_dir, ip_addr, tzinfo, shutdown_future):
     :rtype: tuple
     """
     log = logging.getLogger(__name__)
-    source_dir = os.path.realpath(source_dir)
     target_dir = REMOTE_ROOT_DIRECTORY
     valid_targets = list()
     songs = list()

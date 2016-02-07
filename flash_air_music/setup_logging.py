@@ -2,7 +2,6 @@
 
 import logging
 import logging.handlers
-import os
 import sys
 
 
@@ -65,7 +64,7 @@ def setup_logging(config, name=None):
     :param dict config: Configuration dict to read from.
     :param str name: Which logger name to set handlers to. Used for testing.
     """
-    log_file = os.path.realpath(config['--log']) if config['--log'] else ''
+    log_file = config['--log'] or ''
     root_logger = logging.getLogger(name)
     root_logger.setLevel(logging.DEBUG if config['--verbose'] else logging.INFO)
     formatter_minimal = logging.Formatter('%(message)s')

@@ -3,9 +3,9 @@
 Command line options overridden by config file values.
 
 Usage:
-    FlashAirMusic [options] run
-    FlashAirMusic -h | --help
-    FlashAirMusic -V | --version
+    {program} [options] run
+    {program} -h | --help
+    {program} -V | --version
 
 Options:
     -c FILE --config=FILE       Path to INI config file.

@@ -8,7 +8,7 @@ from textwrap import dedent
 import pytest
 
 from flash_air_music.__main__ import shutdown
-from flash_air_music.configuration import DEFAULT_FFMPEG_BINARY
+from flash_air_music.configuration import FFMPEG_DEFAULT_BINARY
 from flash_air_music.convert import discover, run, transcode
 from tests import HERE
 
@@ -85,7 +85,7 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
             assert 'Size/mtime changed for {}'.format(source_file) not in messages
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 @pytest.mark.parametrize('mode', ['nothing', 'normal', 'error'])
 def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
     """Test convert_cleanup() function.
@@ -95,7 +95,7 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
     :param caplog: pytest extension fixture.
     :param str mode: Scenario to test for.
     """
-    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': DEFAULT_FFMPEG_BINARY, '--threads': '2'})
+    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': FFMPEG_DEFAULT_BINARY, '--threads': '2'})
     loop = asyncio.get_event_loop()
 
     if mode == 'nothing':
@@ -138,7 +138,7 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
         assert 'Failed to remove {}'.format(target_dir.join('empty')) not in messages
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 @pytest.mark.parametrize('mode', ['nothing', 'something'])
 def test_run(monkeypatch, tmpdir, mode):
     """Test run() function.
@@ -149,7 +149,7 @@ def test_run(monkeypatch, tmpdir, mode):
     """
     source_file = tmpdir.ensure_dir('source').join('song.mp3')
     config = {
-        '--ffmpeg-bin': DEFAULT_FFMPEG_BINARY,
+        '--ffmpeg-bin': FFMPEG_DEFAULT_BINARY,
         '--music-source': source_file.dirname,
         '--threads': '2',
         '--working-dir': str(tmpdir),

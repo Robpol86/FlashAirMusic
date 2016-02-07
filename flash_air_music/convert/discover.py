@@ -5,7 +5,7 @@ Target mp3 files hold source metadata in their ID3 comment tags. Each mp3 file i
 
 import os
 
-from flash_air_music.common.base_song import BaseSong
+from flash_air_music.base_song import BaseSong
 from flash_air_music.convert.id3_flac_tags import read_stored_metadata
 
 VALID_SOURCE_EXTENSIONS = ('.flac', '.mp3')
@@ -78,8 +78,6 @@ def get_songs(source_dir, target_dir):
     :return: Song instances that need conversion and list of all mp3 target files that need or don't need conversion.
     :rtype: tuple
     """
-    source_dir = os.path.realpath(source_dir)
-    target_dir = os.path.realpath(target_dir)
     valid_targets = list()
     songs = list()
 
@@ -101,7 +99,6 @@ def files_dirs_to_delete(target_dir, valid_targets):
     :return: Abandoned files to delete and empty directories to remove.
     :rtype: tuple
     """
-    target_dir = os.path.realpath(target_dir)
     delete_files = set()
     remove_dirs = set()
 

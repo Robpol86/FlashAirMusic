@@ -8,13 +8,13 @@ from textwrap import dedent
 
 import pytest
 
-from flash_air_music.configuration import DEFAULT_FFMPEG_BINARY
+from flash_air_music.configuration import FFMPEG_DEFAULT_BINARY
 from flash_air_music.convert import transcode
 from flash_air_music.convert.discover import get_songs, Song
 from tests import HERE
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 def test_convert_file_success(monkeypatch, tmpdir, caplog):
     """Test convert_file() with no errors.
 
@@ -22,7 +22,7 @@ def test_convert_file_success(monkeypatch, tmpdir, caplog):
     :param tmpdir: pytest fixture.
     :param caplog: pytest extension fixture.
     """
-    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': DEFAULT_FFMPEG_BINARY})
+    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': FFMPEG_DEFAULT_BINARY})
     monkeypatch.setattr(transcode, 'SLEEP_FOR', 0.1)
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
@@ -48,7 +48,7 @@ def test_convert_file_success(monkeypatch, tmpdir, caplog):
     assert any(re.match(r'^Process \d+ exited 0$', m) for m in messages)
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 @pytest.mark.parametrize('delete', [False, True])
 def test_convert_file_failure(monkeypatch, tmpdir, caplog, delete):
     """Test convert_file() with errors.
@@ -97,7 +97,7 @@ def test_convert_file_failure(monkeypatch, tmpdir, caplog, delete):
         assert 'Removing {}'.format(target_dir.join('song1.mp3')) not in messages
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 def test_convert_file_deadlock(monkeypatch, tmpdir, caplog):
     """Test convert_file() with ffmpeg outputting a lot of data, filling up buffers.
 
@@ -196,7 +196,7 @@ def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
         assert sent_signals[2].startswith('Timeout exceeded, sending signal 9')
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 @pytest.mark.parametrize('mode', ['failure', 'exception'])
 def test_convert_songs_errors(monkeypatch, tmpdir, caplog, mode):
     """Test convert_songs()'s error handling.
@@ -248,7 +248,7 @@ def test_convert_songs_errors(monkeypatch, tmpdir, caplog, mode):
         assert any(re.match(r'Done converting 2 file\(s\) \(1 failed\)\.$', m) for m in messages)
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 def test_convert_songs_single(monkeypatch, tmpdir, caplog):
     """Test convert_songs() with one file.
 
@@ -256,7 +256,7 @@ def test_convert_songs_single(monkeypatch, tmpdir, caplog):
     :param tmpdir: pytest fixture.
     :param caplog: pytest extension fixture.
     """
-    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': DEFAULT_FFMPEG_BINARY, '--threads': '2'})
+    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': FFMPEG_DEFAULT_BINARY, '--threads': '2'})
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
@@ -274,7 +274,7 @@ def test_convert_songs_single(monkeypatch, tmpdir, caplog):
     assert any(re.match(r'Done converting 1 file\(s\) \(0 failed\)\.$', m) for m in messages)
 
 
-@pytest.mark.skipif(str(DEFAULT_FFMPEG_BINARY is None))
+@pytest.mark.skipif(str(FFMPEG_DEFAULT_BINARY is None))
 def test_convert_songs_semaphore(monkeypatch, tmpdir, caplog):
     """Test convert_songs() concurrency limit.
 

@@ -35,7 +35,7 @@ def test_config_file(monkeypatch, tmpdir, caplog, bad):
     # Set fake ffmpeg.
     ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
-    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
+    monkeypatch.setattr(configuration, 'FFMPEG_DEFAULT_BINARY', str(ffmpeg))
 
     # Run.
     if not bad:
@@ -75,7 +75,7 @@ def test_validate_config_log(monkeypatch, tmpdir, caplog, mode):
     # Set fake ffmpeg.
     ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
-    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
+    monkeypatch.setattr(configuration, 'FFMPEG_DEFAULT_BINARY', str(ffmpeg))
 
     # Populate tmpdir.
     if mode != 'no_parent':
@@ -132,7 +132,7 @@ def test_validate_config_music_source(monkeypatch, tmpdir, caplog, mode):
     # Set fake ffmpeg.
     ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
-    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
+    monkeypatch.setattr(configuration, 'FFMPEG_DEFAULT_BINARY', str(ffmpeg))
 
     # Populate tmpdir.
     if mode != 'dne':
@@ -189,7 +189,7 @@ def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     # Set fake ffmpeg.
     ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
-    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
+    monkeypatch.setattr(configuration, 'FFMPEG_DEFAULT_BINARY', str(ffmpeg))
 
     # Populate tmpdir.
     if mode != 'dne':
@@ -250,7 +250,7 @@ def test_validate_config_mac_addr(monkeypatch, tmpdir, caplog, mode):
     # Set fake ffmpeg.
     ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
-    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
+    monkeypatch.setattr(configuration, 'FFMPEG_DEFAULT_BINARY', str(ffmpeg))
 
     # Run.
     if mode != 'bad':
@@ -293,7 +293,7 @@ def test_validate_config_threads(monkeypatch, tmpdir, caplog, mode):
     # Set fake ffmpeg.
     ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
-    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
+    monkeypatch.setattr(configuration, 'FFMPEG_DEFAULT_BINARY', str(ffmpeg))
 
     # Run.
     if mode not in ('a', '5.5'):
@@ -331,7 +331,7 @@ def test_validate_config_ffmpeg_bin(monkeypatch, tmpdir, caplog, mode):
         ffmpeg.ensure()
         if mode != 'perm':
             ffmpeg.chmod(0o0755)
-    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg) if mode != 'default missing' else None)
+    monkeypatch.setattr(configuration, 'FFMPEG_DEFAULT_BINARY', str(ffmpeg) if mode != 'default missing' else None)
 
     # Setup argv.
     argv.extend(['run', '--music-source', str(tmpdir.ensure_dir('source'))])
@@ -376,7 +376,7 @@ def test_update_config(monkeypatch, tmpdir, caplog, mode):
     # Set fake ffmpeg.
     ffmpeg = tmpdir.ensure('ffmpeg')
     ffmpeg.chmod(0o0755)
-    monkeypatch.setattr(configuration, 'DEFAULT_FFMPEG_BINARY', str(ffmpeg))
+    monkeypatch.setattr(configuration, 'FFMPEG_DEFAULT_BINARY', str(ffmpeg))
 
     # Setup argv.
     argv.extend(['run', '--music-source', str(tmpdir.ensure_dir('source'))])
