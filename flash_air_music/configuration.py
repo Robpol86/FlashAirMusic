@@ -13,7 +13,7 @@ from flash_air_music.exceptions import ConfigError
 from flash_air_music.setup_logging import setup_logging
 
 FFMPEG_DEFAULT_BINARY = find_executable('ffmpeg')
-DEFAULT_WORKING_DIR = os.path.join(os.environ['HOME'], 'FlashAirMusicWorkingDir')
+FFMPEG_NOT_FOUND_LABEL = '<not found>'
 SIGNALS_INT_TO_NAME = {v: {a for a, b in vars(signal).items() if a.startswith('SIG') and b == v}
                        for k, v in vars(signal).items() if k.startswith('SIG')}
 GLOBAL_MUTABLE_CONFIG = dict()
@@ -28,7 +28,7 @@ def _get_arguments(doc):
     :return: Parsed options.
     :rtype: dict
     """
-    docstring = doc.format(program='FlashAirMusic')
+    docstring = doc.format(program='FlashAirMusic', ffmpeg_default=FFMPEG_DEFAULT_BINARY or FFMPEG_NOT_FOUND_LABEL)
     require = getattr(pkg_resources, 'require')  # Stupid linting error.
     project = [p for p in require('FlashAirMusic') if p.project_name == 'FlashAirMusic'][0]
     version = project.version
@@ -67,9 +67,6 @@ def _validate_config(config):  # pylint:disable=too-many-branches
             raise ConfigError
 
     # --music-source
-    if not config['--music-source']:
-        logging.getLogger(__name__).error('Music source directory not specified.')
-        raise ConfigError
     if not os.path.isdir(config['--music-source']):
         logging.getLogger(__name__).error('Music source directory does not exist: %s', config['--music-source'])
         raise ConfigError
@@ -97,7 +94,7 @@ def _validate_config(config):  # pylint:disable=too-many-branches
         raise ConfigError
 
     # --ffmpeg-bin
-    if not config['--ffmpeg-bin']:
+    if config['--ffmpeg-bin'].endswith(FFMPEG_NOT_FOUND_LABEL):
         logging.getLogger(__name__).error('Unable to find ffmpeg in PATH.')
         raise ConfigError
     if not os.path.isfile(config['--ffmpeg-bin']):
@@ -127,12 +124,6 @@ def initialize_config(doc):
     except DocoptcfgFileError as exc:
         logging.getLogger(__name__).error('Config file specified but invalid: %s', exc.message)
         raise ConfigError
-
-    # Set defaults.
-    if not GLOBAL_MUTABLE_CONFIG['--ffmpeg-bin']:
-        GLOBAL_MUTABLE_CONFIG['--ffmpeg-bin'] = FFMPEG_DEFAULT_BINARY
-    if not GLOBAL_MUTABLE_CONFIG['--working-dir']:
-        GLOBAL_MUTABLE_CONFIG['--working-dir'] = DEFAULT_WORKING_DIR
 
     # Resolve relative paths.
     _real_paths(GLOBAL_MUTABLE_CONFIG)
@@ -164,12 +155,6 @@ def update_config(doc, signum):
     except DocoptcfgFileError as exc:
         logging.getLogger(__name__).error('Config file specified but invalid: %s', exc.message)
         return
-
-    # Set defaults.
-    if not config['--ffmpeg-bin']:
-        config['--ffmpeg-bin'] = FFMPEG_DEFAULT_BINARY
-    if not config['--working-dir']:
-        config['--working-dir'] = DEFAULT_WORKING_DIR
 
     # Resolve relative paths.
     _real_paths(config)

@@ -169,7 +169,7 @@ def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg)})
     monkeypatch.setattr(transcode, 'SLEEP_FOR', 0.1)
     monkeypatch.setattr(transcode, 'TIMEOUT', 0.5)
-    monkeypatch.setenv('EXIT_SIGNAL', str(exit_signal))
+    monkeypatch.setenv('EXIT_SIGNAL', exit_signal)
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
     HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
