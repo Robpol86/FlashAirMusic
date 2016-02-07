@@ -10,6 +10,7 @@ from flash_air_music.upload import api
 
 LUA_HELPER_SCRIPT = os.path.join(os.path.dirname(__file__), '_fam_move_touch.lua')
 REMOTE_ROOT_DIRECTORY = '/MUSIC'  # Must not be more than 1 level deep due to API constraints and my laziness.
+DO_NOT_DELETE = (REMOTE_ROOT_DIRECTORY, '')
 UPLOAD_STAGE_NAME = '_fam_staged.bin'
 
 
@@ -70,7 +71,7 @@ def get_card_time_zone(ip_addr):
     return datetime.timezone(datetime.timedelta(hours=fifteen_min_offset / 4.0))
 
 
-def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
+def get_files(ip_addr, tzinfo, directory, shutdown_future):
     """Recursively get a list of MP3s currently on the SD card in a directory.
 
     API is not recursive, so this function will call itself on every directory it encounters.
@@ -88,12 +89,18 @@ def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
     :param str ip_addr: IP address of FlashAir to connect to.
     :param datetime.timezone tzinfo: Timezone the card is set to.
     :param str directory: Remote directory to get file list from.
+    :param asyncio.Future shutdown_future: Shutdown signal.
 
     :return: Files dict ({file path: (file size, mtime)}) and list of empty dirs.
     :rtype: tuple
     """
     log = logging.getLogger(__name__)
     directory = directory.rstrip('/')  # Remove trailing slash.
+
+    # Handle shutdown.
+    if shutdown_future.done():
+        log.info('Service shutdown initiated, not getting files.')
+        return dict(), list()
 
     # Query API.
     response_text = api.command_get_file_list(ip_addr, directory)
@@ -106,7 +113,7 @@ def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
     for name, size, attr, fdate, ftime in (i.groups() for i in regex.finditer(response_text.replace('\r', ''))):
         if int(attr) & 16:  # Handle directory.
             try:
-                subdir = get_files(ip_addr, tzinfo, '{}/{}'.format(directory, name))  # Recurse into dir.
+                subdir = get_files(ip_addr, tzinfo, '{}/{}'.format(directory, name), shutdown_future)  # Recurse into.
             except exceptions.FlashAirURLTooLong:
                 log.warning('Directory path too long, ignoring: %s', name)
                 continue
@@ -121,7 +128,7 @@ def get_files(ip_addr, tzinfo, directory=REMOTE_ROOT_DIRECTORY):
     return files, empty_dirs
 
 
-def delete_files_dirs(ip_addr, paths):
+def delete_files_dirs(ip_addr, paths, shutdown_future):
     """Delete files and directories on the FlashAir card.
 
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
@@ -129,10 +136,13 @@ def delete_files_dirs(ip_addr, paths):
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param iter paths: List of file/dir paths to remove.
+    :param asyncio.Future shutdown_future: Shutdown signal.
     """
-    forbidden = (REMOTE_ROOT_DIRECTORY, '')
-    sorted_paths = sorted((p for p in paths if p.rstrip('/') not in forbidden), reverse=True)
+    sorted_paths = sorted((p for p in paths if p.rstrip('/') not in DO_NOT_DELETE), reverse=True)
     for path in sorted_paths:
+        if shutdown_future.done():
+            logging.getLogger(__name__).info('Service shutdown initiated, stop deleting items.')
+            break
         api.upload_delete(ip_addr, path)
 
 
@@ -174,7 +184,7 @@ def initialize_upload(ip_addr, tzinfo):
         raise exceptions.FlashAirBadResponse(text, None)
 
 
-def upload_files(ip_addr, files_attrs):
+def upload_files(ip_addr, files_attrs, shutdown_future):
     """Upload files to the card one at a time.
 
     Each item in the `files_attrs` list is a tuple of:
@@ -187,11 +197,15 @@ def upload_files(ip_addr, files_attrs):
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param iter files_attrs: List of tuples about files and how to upload them.
+    :param asyncio.Future shutdown_future: Shutdown signal.
     """
     log = logging.getLogger(__name__)
     script_path = '{}/{}'.format(REMOTE_ROOT_DIRECTORY, os.path.basename(LUA_HELPER_SCRIPT))
 
     for source, destination, mtime in files_attrs:
+        if shutdown_future.done():
+            logging.getLogger(__name__).info('Service shutdown initiated, stop uploading songs.')
+            break
         log.info('Uploading to %s/%s', REMOTE_ROOT_DIRECTORY, UPLOAD_STAGE_NAME)
         with open(source, mode='rb') as handle:
             api.upload_upload_file(ip_addr, UPLOAD_STAGE_NAME, handle)

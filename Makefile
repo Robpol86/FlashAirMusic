@@ -38,7 +38,7 @@ docker-rpmtest: install
 	(cd /tests && su -m user -c "py.test-3 .")
 
 docker-build-image:
-	cat DockerfileRPMBuild |envsubst > Dockerfile
+	cat DockerfileTemplates/DockerfileFedora |envsubst > Dockerfile
 	docker build -t local/$(MODE) .
 	rm Dockerfile
 

@@ -5,8 +5,8 @@ import os
 import unicodedata
 
 from flash_air_music.common.base_song import BaseSong
-from flash_air_music.exceptions import FlashAirError, FlashAirNetworkError
-from flash_air_music.upload.interface import get_files, REMOTE_ROOT_DIRECTORY
+from flash_air_music.exceptions import FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
+from flash_air_music.upload.interface import DO_NOT_DELETE, get_files, REMOTE_ROOT_DIRECTORY
 
 MAX_LENGTH = 255
 TRANS_TABLE = str.maketrans(r'&<>:"\|?*', "+() '  . ")
@@ -70,6 +70,11 @@ class Song(BaseSong):
         self.stored_metadata['source_size'] = int(remote_metadata[0])
         self.stored_metadata['source_mtime'] = int(remote_metadata[1])
 
+    @property
+    def attrs(self):
+        """Return attributes of this song expected by upload.upload_files()."""
+        return self.source, self.target, self.live_metadata['source_mtime']
+
 
 def walk_source(source_dir):
     """Walk source directory and yield valid file paths.
@@ -84,7 +89,7 @@ def walk_source(source_dir):
             yield path
 
 
-def get_songs(source_dir, ip_addr, tzinfo):
+def get_songs(source_dir, ip_addr, tzinfo, shutdown_future):
     """Walk local source and remote target directories looking for files to transfer.
 
     :raise FlashAirNetworkError: When there is trouble reaching the API.
@@ -92,6 +97,7 @@ def get_songs(source_dir, ip_addr, tzinfo):
     :param str source_dir: Source directory.
     :param str ip_addr: IP address of FlashAir to connect to.
     :param datetime.timezone tzinfo: Timezone the card is set to.
+    :param asyncio.Future shutdown_future: Shutdown signal.
 
     :return: Song instances, valid remote target files, all remote target files, and empty remote directories.
     :rtype: tuple
@@ -104,11 +110,16 @@ def get_songs(source_dir, ip_addr, tzinfo):
 
     # First get remote files.
     try:
-        files, empty_dirs = get_files(ip_addr, tzinfo, REMOTE_ROOT_DIRECTORY)
+        files, empty_dirs = get_files(ip_addr, tzinfo, REMOTE_ROOT_DIRECTORY, shutdown_future)
     except FlashAirNetworkError:
         raise  # To be handled (retired) in caller.
+    except FlashAirURLTooLong:
+        log.exception('Got FlashAirURLTooLong, is %s too long?', REMOTE_ROOT_DIRECTORY)
+        return songs, valid_targets, dict(), list()
     except FlashAirError:
-        log.exception('Unexpected exception in get_files().')
+        log.exception('Unexpected exception.')
+        return songs, valid_targets, dict(), list()
+    if shutdown_future.done():
         return songs, valid_targets, dict(), list()
 
     # Get local files.
@@ -117,6 +128,9 @@ def get_songs(source_dir, ip_addr, tzinfo):
         valid_targets.append(song.target)
         if song.needs_action:
             songs.append(song)
+
+    # Prune empty_dirs.
+    empty_dirs = [p for p in empty_dirs if p.rstrip('/') not in DO_NOT_DELETE]
 
     return songs, valid_targets, files, empty_dirs
 
