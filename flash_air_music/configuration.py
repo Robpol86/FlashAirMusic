@@ -12,7 +12,6 @@ from docoptcfg import docoptcfg, DocoptcfgFileError
 from flash_air_music.exceptions import ConfigError
 from flash_air_music.setup_logging import setup_logging
 
-CONVERTED_MUSIC_SUBDIR = 'converted_music'
 DEFAULT_FFMPEG_BINARY = find_executable('ffmpeg')
 DEFAULT_WORKING_DIR = os.path.join(os.environ['HOME'], 'FlashAirMusicWorkingDir')
 SIGNALS_INT_TO_NAME = {v: {a for a, b in vars(signal).items() if a.startswith('SIG') and b == v}
@@ -73,9 +72,11 @@ def _validate_config(config):  # pylint:disable=too-many-branches
     if not os.access(config['--working-dir'], os.R_OK | os.W_OK | os.X_OK):
         logging.getLogger(__name__).error('No access to working directory: %s', config['--working-dir'])
         raise ConfigError
-    if os.path.realpath(os.path.join(config['--working-dir'],
-                                     CONVERTED_MUSIC_SUBDIR)).startswith(os.path.realpath(config['--music-source'])):
-        logging.getLogger(__name__).error('Working directory converted music subdir cannot be in music source dir.')
+    if os.path.realpath(config['--working-dir']).startswith(os.path.realpath(config['--music-source'])):
+        logging.getLogger(__name__).error('Working directory cannot be in music source dir.')
+        raise ConfigError
+    if os.path.realpath(config['--music-source']).startswith(os.path.realpath(config['--working-dir'])):
+        logging.getLogger(__name__).error('Music source dir cannot be in working directory.')
         raise ConfigError
 
     # --mac-addr
@@ -124,12 +125,6 @@ def initialize_config(doc):
     # Validate.
     _validate_config(GLOBAL_MUTABLE_CONFIG)
 
-    # Create destination directory.
-    try:
-        os.mkdir(os.path.realpath(os.path.join(GLOBAL_MUTABLE_CONFIG['--working-dir'], CONVERTED_MUSIC_SUBDIR)))
-    except FileExistsError:
-        pass
-
     # Setup logging.
     setup_logging(GLOBAL_MUTABLE_CONFIG)
     log = logging.getLogger(__name__)
@@ -169,12 +164,6 @@ def update_config(doc, signum):
 
     # Update.
     GLOBAL_MUTABLE_CONFIG.update(config)
-
-    # Create destination directory.
-    try:
-        os.mkdir(os.path.realpath(os.path.join(GLOBAL_MUTABLE_CONFIG['--working-dir'], CONVERTED_MUSIC_SUBDIR)))
-    except FileExistsError:
-        pass
 
     # Re-setup logging.
     setup_logging(GLOBAL_MUTABLE_CONFIG)

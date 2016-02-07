@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 
-from flash_air_music.configuration import CONVERTED_MUSIC_SUBDIR, GLOBAL_MUTABLE_CONFIG
+from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
 from flash_air_music.convert.discover import files_dirs_to_delete, get_songs
 from flash_air_music.convert.transcode import convert_songs
 
@@ -20,7 +20,7 @@ def scan_wait():
     log = logging.getLogger(__name__)
     log.debug('Scanning for new/changed songs...')
     source_dir = GLOBAL_MUTABLE_CONFIG['--music-source']
-    target_dir = os.path.join(GLOBAL_MUTABLE_CONFIG['--working-dir'], CONVERTED_MUSIC_SUBDIR)
+    target_dir = GLOBAL_MUTABLE_CONFIG['--working-dir']
     songs, valid_targets = get_songs(source_dir, target_dir)
     delete_files, remove_dirs = files_dirs_to_delete(target_dir, valid_targets)
 

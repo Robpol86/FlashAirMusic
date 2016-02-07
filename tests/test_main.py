@@ -11,7 +11,7 @@ from textwrap import dedent
 
 import pytest
 
-from flash_air_music.configuration import CONVERTED_MUSIC_SUBDIR, DEFAULT_FFMPEG_BINARY
+from flash_air_music.configuration import DEFAULT_FFMPEG_BINARY
 from tests import HERE
 
 
@@ -33,7 +33,7 @@ def test_error(tmpdir):
     with pytest.raises(subprocess.CalledProcessError) as exc:
         subprocess.check_output(command, stderr=subprocess.STDOUT, timeout=1)
     stdout = exc.value.output.decode('utf-8')
-    assert 'Working directory converted music subdir cannot be in music source dir.' in stdout
+    assert 'Working directory cannot be in music source dir.' in stdout
     assert 'Failure.' in stdout
     assert 'BUG!' not in stdout
 
@@ -186,9 +186,9 @@ def test_songs(tmpdir):
     assert 'ERROR' not in stdout
     assert 'BUG!' not in stdout
     assert process.poll() == 0
-    assert tmpdir.join('working', CONVERTED_MUSIC_SUBDIR, 'song1.mp3').check(file=True)
-    assert tmpdir.join('working', CONVERTED_MUSIC_SUBDIR, 'song2.mp3').check(file=True)
-    assert tmpdir.join('working', CONVERTED_MUSIC_SUBDIR, 'song3.mp3').check(file=True)
+    assert tmpdir.join('working', 'song1.mp3').check(file=True)
+    assert tmpdir.join('working', 'song2.mp3').check(file=True)
+    assert tmpdir.join('working', 'song3.mp3').check(file=True)
 
 
 @pytest.mark.parametrize('signum', [signal.SIGINT, signal.SIGTERM])

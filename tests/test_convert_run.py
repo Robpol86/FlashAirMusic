@@ -8,7 +8,7 @@ from textwrap import dedent
 import pytest
 
 from flash_air_music.__main__ import shutdown
-from flash_air_music.configuration import CONVERTED_MUSIC_SUBDIR, DEFAULT_FFMPEG_BINARY
+from flash_air_music.configuration import DEFAULT_FFMPEG_BINARY
 from flash_air_music.convert import discover, run, transcode
 from tests import HERE
 
@@ -52,7 +52,7 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
     """
     source_file = tmpdir.ensure_dir('source').join('song.mp3')
     monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG',
-                        {'--music-source': source_file.dirname, '--working-dir': str(tmpdir)})
+                        {'--music-source': source_file.dirname, '--working-dir': str(tmpdir.ensure_dir('working'))})
     if mode != 'none':
         HERE.join('1khz_sine.mp3').copy(source_file)
 
@@ -162,15 +162,14 @@ def test_run(monkeypatch, tmpdir, mode):
     if mode == 'nothing':
         loop.run_until_complete(run.run(loop, semaphore, asyncio.Future()))
         assert not semaphore.locked()
-        assert not tmpdir.join(CONVERTED_MUSIC_SUBDIR, 'song.mp3').check()
+        assert not tmpdir.join('song.mp3').check()
         return
 
-    tmpdir.ensure_dir(CONVERTED_MUSIC_SUBDIR)
     HERE.join('1khz_sine.mp3').copy(source_file)
-    assert not tmpdir.join(CONVERTED_MUSIC_SUBDIR, 'song.mp3').check()
+    assert not tmpdir.join('song.mp3').check()
     loop.run_until_complete(run.run(loop, semaphore, asyncio.Future()))
     assert not semaphore.locked()
-    assert tmpdir.join(CONVERTED_MUSIC_SUBDIR, 'song.mp3').check(file=True)
+    assert tmpdir.join('song.mp3').check(file=True)
 
 
 @pytest.mark.parametrize('signum', [signal.SIGTERM, signal.SIGINT])
@@ -197,7 +196,6 @@ def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
     source_dir = tmpdir.ensure_dir('source')
     for i in range(10):
         source_dir.ensure('song{}.mp3'.format(i))
-    tmpdir.ensure_dir(CONVERTED_MUSIC_SUBDIR)
 
     config = {
         '--ffmpeg-bin': str(ffmpeg),

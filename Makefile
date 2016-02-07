@@ -26,16 +26,6 @@ install:
 	dnf -qy remove $(NAME) || true
 	dnf -y install $(NAME)-$(VERSION)-*.rpm
 
-docker-rpmtest:
-	systemd-analyze verify $(NAME).service
-	rpmlint $(NAME)
-	$(NAME) --help
-	test $$(rpm -q $(NAME) --queryformat '%{NAME}') == "$(NAME)"
-	test "$$(rpm -q $(NAME) --queryformat '%{SUMMARY}')" == "$(SUMMARY)"
-	test "$$(rpm -q $(NAME) --queryformat '%{URL}')" == "$(URL)"
-	test $$(rpm -q $(NAME) --queryformat '%{VERSION}') == "$(VERSION)"
-	test $$($(NAME) --version) == "$(VERSION)"
-
 docker-build:
 	cat DockerfileTemplates/DockerfileFedoraBuild |envsubst > Dockerfile
 	docker build -t build/$(MODE) .
@@ -47,3 +37,13 @@ docker-build:
 docker-run:
 	docker run -v ${PWD}:/build:ro run/$(MODE) make docker-rpmtest
 	docker run -v ${PWD}/tests:/build/tests:ro run/$(MODE) su -m user -c "py.test-3 tests"
+
+docker-rpmtest:
+	systemd-analyze verify $(NAME).service
+	rpmlint $(NAME)
+	$(NAME) --help
+	test $$(rpm -q $(NAME) --queryformat '%{NAME}') == "$(NAME)"
+	test "$$(rpm -q $(NAME) --queryformat '%{SUMMARY}')" == "$(SUMMARY)"
+	test "$$(rpm -q $(NAME) --queryformat '%{URL}')" == "$(URL)"
+	test $$(rpm -q $(NAME) --queryformat '%{VERSION}') == "$(VERSION)"
+	test $$($(NAME) --version) == "$(VERSION)"
