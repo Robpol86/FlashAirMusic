@@ -45,6 +45,9 @@ Version:            %{getenv:VERSION}
 %{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/%{name}
 %{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/logrotate.d
 %{__install} -d -m 0755 %{buildroot}%{_unitdir}
+%{__install} -d -m 0755 %{buildroot}/home/%{base_module}
+%{__install} -d -m 0755 %{buildroot}/home/%{base_module}/fam_music_source
+%{__install} -d -m 0755 %{buildroot}/home/%{base_module}/fam_working_dir
 %{__install} -m 0644 %{name}.ini %{buildroot}%{_sysconfdir}/%{name}/
 %{__install} -m 0644 %{name}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 %{__install} -m 0644 %{name}.service %{buildroot}%{_unitdir}/
@@ -68,6 +71,9 @@ exit 0
 %config(noreplace) %attr(-, root, %{daemon_group}) %{_sysconfdir}/%{name}/%{name}.ini
 %config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
 %dir %attr(-, %{daemon_user}, %{daemon_group}) %{_localstatedir}/log/%{name}
+%dir %attr(-, %{daemon_user}, %{daemon_group}) /home/%{base_module}
+%dir %attr(-, %{daemon_user}, %{daemon_group}) /home/%{base_module}/fam_music_source
+%dir %attr(-, %{daemon_user}, %{daemon_group}) /home/%{base_module}/fam_working_dir
 %doc README.rst
 %license LICENSE
 %{_bindir}/%{name}
