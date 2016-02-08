@@ -1,7 +1,7 @@
-export NAME = $(shell ./setup.py --name)
-export SUMMARY = $(shell ./setup.py --description |sed 's/\.$$//')
-export URL = $(shell ./setup.py --url)
-export VERSION = $(shell ./setup.py --version)
+export NAME := $(shell ./setup.py --name)
+export SUMMARY := $(shell ./setup.py --description |sed 's/\.$$//')
+export URL := $(shell ./setup.py --url)
+export VERSION := $(shell ./setup.py --version)
 
 all: clean pre sdist rpm
 
@@ -53,11 +53,19 @@ docker-rpmlint:
 	test $$($(NAME) --version) == "$(VERSION)"
 
 docker-rpmtest:
+	! test -f /home/$(NAME)/fam_working_dir/song1.mp3
+	! test -f /home/$(NAME)/fam_working_dir/song2.mp3
 	! test -f /var/log/$(NAME)/$(NAME).log
+
 	systemctl start $(NAME).service
-	sleep 2
-	systemctl status -l $(NAME).service
+	until systemctl status -l $(NAME).service; do sleep 1; done
+
+	cp tests/1khz_sine.flac /home/$(NAME)/fam_music_source/song1.flac
+	cp tests/1khz_sine.mp3 /home/$(NAME)/fam_music_source/song2.mp3
+	until grep "Done converting 2 file(s) (0 failed)." /var/log/$(NAME)/$(NAME).log; do sleep 1; done
+	ffprobe /home/$(NAME)/fam_working_dir/song1.mp3
+	ffprobe /home/$(NAME)/fam_working_dir/song2.mp3
+
 	systemctl stop $(NAME).service
-	sleep 2
-	! systemctl status -l $(NAME).service
+	until ! systemctl status -l $(NAME).service; do sleep 1; done
 	grep "Shutting down" /var/log/$(NAME)/$(NAME).log

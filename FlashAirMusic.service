@@ -8,7 +8,7 @@ CapabilityBoundingSet=CAP_KILL
 Environment="FAM_CONFIG=/etc/FlashAirMusic/FlashAirMusic.ini"
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStart=/usr/bin/FlashAirMusic run
-Group=flash_air_music
+Group=FlashAirMusic
 LimitAS=1073741824
 LimitFSIZE=1073741824
 LimitMEMLOCK=1073741824
@@ -24,7 +24,7 @@ StandardOutput=syslog
 StartLimitBurst=3
 StartLimitInterval=60s
 Type=simple
-User=flash_air_music
+User=FlashAirMusic
 
 [Install]
 WantedBy=multi-user.target
