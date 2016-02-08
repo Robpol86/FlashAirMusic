@@ -49,7 +49,9 @@ def watch_directory(loop, semaphore, shutdown_future):
     log = logging.getLogger(__name__)
     previous_hash = None
     array = bytearray()
+    ramp_up = list(range(EVERY_SECONDS_WATCH, 15, -35))
     while True:
+        sleep_for = ramp_up.pop() if ramp_up else EVERY_SECONDS_WATCH
         source_dir = GLOBAL_MUTABLE_CONFIG['--music-source']  # Keep in loop for when update_config() is called.
         for i in sorted((p, s.st_size, s.st_mtime) for p, s in ((p, os.stat(p)) for p in walk_source(source_dir))):
             array.extend(str(i).encode('utf-8'))
@@ -61,8 +63,8 @@ def watch_directory(loop, semaphore, shutdown_future):
             previous_hash = current_hash
         else:
             log.debug('watch_directory() no change in file system, not calling run().')
-        log.debug('watch_directory() sleeping %d seconds.', EVERY_SECONDS_WATCH)
-        for _ in range(EVERY_SECONDS_WATCH):
+        log.debug('watch_directory() sleeping %d seconds.', sleep_for)
+        for _ in range(sleep_for):
             yield from asyncio.sleep(1)
             if shutdown_future.done():
                 log.debug('watch_directory() saw shutdown signal.')
