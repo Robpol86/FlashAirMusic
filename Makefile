@@ -38,7 +38,7 @@ docker-run: DOCKER_CONTAINER_ID=$$(docker ps |grep run/$(MODE) |awk '{print $$1}
 docker-run:
 	docker run -v ${PWD}:/build:ro run/$(MODE) make docker-rpmlint
 	docker run -v ${PWD}/tests:/build/tests:ro run/$(MODE) su -m user -c "py.test-3 tests"
-	docker run -v ${PWD}:/build:ro -v /sys/fs/cgroup --privileged -dti run/$(MODE)
+	docker run -v ${PWD}:/build:ro -v /sys/fs/cgroup:/sys/fs/cgroup:ro --privileged -dti run/$(MODE)
 	docker logs $(DOCKER_CONTAINER_ID)
 	docker exec -ti $(DOCKER_CONTAINER_ID) make docker-rpmtest
 
@@ -60,6 +60,7 @@ docker-rpmtest:
 	! test -f $(PATH_SONG2)
 	! test -f $(PATH_LOG)
 
+	mkdir /home/$(NAME)/fam_music_source
 	systemctl start $(NAME).service
 	systemctl status -l $(NAME).service
 	for i in {1..5}; do test -f $(PATH_LOG) && break; sleep 1; done

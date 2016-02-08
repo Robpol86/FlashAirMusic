@@ -1,4 +1,4 @@
-"""Sync FLAC music to your car's head unit using a FlashAir WiFi SD card.
+"""Convert FLAC music and sync it to a FlashAir WiFI SD card.
 
 Command line options overridden by config file values.
 

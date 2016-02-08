@@ -2,7 +2,7 @@
 FlashAirMusic
 =============
 
-Sync FLAC music to your car's head unit using a FlashAir WiFi SD card.
+Convert FLAC music and sync it to a FlashAir WiFI SD card.
 
 .. image:: https://img.shields.io/travis/Robpol86/FlashAirMusic/master.svg?style=flat-square&label=Travis%20CI
     :target: https://travis-ci.org/Robpol86/FlashAirMusic
