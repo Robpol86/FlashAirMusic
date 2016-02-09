@@ -16,26 +16,26 @@ def test_song(tmpdir, mode):
     :param tmpdir: pytest fixture.
     :param str mode: Scenario to test for.
     """
-    source_file = tmpdir.ensure('source', 'song.mp3')
-    HERE.join('1khz_sine.mp3').copy(source_file)
+    source = tmpdir.ensure('source', 'song.mp3')
+    HERE.join('1khz_sine.mp3').copy(source)
 
     # Write metadata.
     remote_metadata = dict()
     if mode != 'no target':
-        remote_metadata['/MUSIC/song.mp3'] = [source_file.stat().size, source_file.stat().mtime]
+        remote_metadata['/MUSIC/song.mp3'] = [source.stat().size, source.stat().mtime]
     if mode == 'ts':
         remote_metadata['/MUSIC/song.mp3'][0] -= 20
     elif mode == 'tt':
         remote_metadata['/MUSIC/song.mp3'][1] -= 20
 
     # Run.
-    song = discover.Song(str(source_file), source_file.dirname, '/MUSIC', remote_metadata)
+    song = discover.Song(str(source), source.dirname, '/MUSIC', remote_metadata)
 
     # Verify.
-    assert song.source == str(source_file)
+    assert song.source == str(source)
     assert song.target == '/MUSIC/song.mp3'
     assert song.needs_action is (False if mode == 'up to date' else True)
-    assert song.attrs == (str(source_file), '/MUSIC/song.mp3', int(source_file.stat().mtime))
+    assert song.attrs == (str(source), '/MUSIC/song.mp3', int(source.stat().mtime), int(source.stat().size))
 
 
 def test_song_path(tmpdir):

@@ -72,8 +72,8 @@ class Song(BaseSong):
 
     @property
     def attrs(self):
-        """Return attributes of this song expected by upload.upload_files()."""
-        return self.source, self.target, self.live_metadata['source_mtime']
+        """Return attributes of this song expected by upload.upload_files(). Include extra item for sorting."""
+        return self.source, self.target, self.live_metadata['source_mtime'], self.live_metadata['source_size']
 
 
 def walk_source(source_dir):

@@ -3,9 +3,9 @@
 import logging
 
 from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
-from flash_air_music.exceptions import FlashAirError, FlashAirNetworkError
+from flash_air_music.exceptions import FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
 from flash_air_music.upload.discover import files_dirs_to_delete, get_songs
-from flash_air_music.upload.interface import get_card_time_zone
+from flash_air_music.upload.interface import delete_files_dirs, get_card_time_zone, initialize_upload, upload_files
 
 
 def scan(ip_addr, shutdown_future):
@@ -37,3 +37,35 @@ def scan(ip_addr, shutdown_future):
     delete_paths = files_dirs_to_delete(valid_targets, files, empty_dirs)
 
     return songs, delete_paths, tzinfo
+
+
+def upload_cleanup(ip_addr, songs, delete_paths, tzinfo, shutdown_future):
+    """Remove remote files/directories and upload new/changed songs. Upload smallest files first.
+
+    :raise FlashAirNetworkError: When there is trouble reaching the API.
+
+    :param str ip_addr: IP address of FlashAir to connect to.
+    :param iter songs: List of songs to upload.
+    :param iter delete_paths: Set of files and/or directories to remote on the FlashAir card.
+    :param datetime.timezone tzinfo: Timezone the card is set to.
+    :param asyncio.Future shutdown_future: Shutdown signal.
+    """
+    log = logging.getLogger(__name__)
+    files_attrs = [j[:3] for j in sorted((s.attrs for s in songs), key=lambda i: i[-1])]
+
+    # Lock card to prevent host from making changes and copy helper Lua script.
+    try:
+        log.info('Preparing FlashAir card for changes.')
+        initialize_upload(ip_addr, tzinfo)
+        if delete_paths:
+            log.info('Deleting %d file(s)/dir(s) on the FlashAir card.', len(delete_paths))
+            delete_files_dirs(ip_addr, delete_paths, shutdown_future)
+        if songs:
+            log.info('Uploading %d song(s).', len(songs))
+            upload_files(ip_addr, files_attrs, shutdown_future)
+    except FlashAirURLTooLong:
+        log.exception('Lua script path is too long for some reason???')
+    except FlashAirNetworkError:
+        raise  # To be handled in caller.
+    except FlashAirError:
+        log.exception('Unexpected exception.')
