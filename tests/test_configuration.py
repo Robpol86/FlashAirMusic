@@ -182,7 +182,7 @@ def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
     if mode == 'collision1':
         argv.extend(['--music-source', str(tmpdir)])
     elif mode == 'collision2':
-        argv.extend(['--music-source', str(tmpdir.join('fam_working_dir').ensure_dir('source'))])
+        argv.extend(['--music-source', str(tmpdir.ensure_dir('fam_working_dir', 'source'))])
     else:
         argv.extend(['--music-source', str(tmpdir.ensure_dir('source'))])
         if mode != 'default':

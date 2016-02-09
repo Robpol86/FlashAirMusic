@@ -147,7 +147,7 @@ def test_run(monkeypatch, tmpdir, mode):
     :param tmpdir: pytest fixture.
     :param str mode: Scenario to test for.
     """
-    source_file = tmpdir.ensure_dir('source').join('song.mp3')
+    source_file = tmpdir.ensure('source', 'song.mp3')
     config = {
         '--ffmpeg-bin': FFMPEG_DEFAULT_BINARY,
         '--music-source': source_file.dirname,

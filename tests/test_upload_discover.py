@@ -16,7 +16,7 @@ def test_song(tmpdir, mode):
     :param tmpdir: pytest fixture.
     :param str mode: Scenario to test for.
     """
-    source_file = tmpdir.ensure_dir('source').join('song.mp3')
+    source_file = tmpdir.ensure('source', 'song.mp3')
     HERE.join('1khz_sine.mp3').copy(source_file)
 
     # Write metadata.
@@ -43,7 +43,7 @@ def test_song_path(tmpdir):
 
     :param tmpdir: pytest fixture.
     """
-    source_file = tmpdir.ensure_dir('source').join('šöñgæ.mp3')
+    source_file = tmpdir.ensure('source', 'šöñgæ.mp3')
     HERE.join('1khz_sine.mp3').copy(source_file)
 
     # Generate long path.

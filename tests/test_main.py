@@ -213,7 +213,7 @@ def test_interrupt_ffmpeg(monkeypatch, tmpdir, signum):
     HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song2.mp3'))
     HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song3.mp3'))
 
-    ffmpeg = tmpdir.ensure_dir('bin').join('ffmpeg')
+    ffmpeg = tmpdir.ensure('bin', 'ffmpeg')
     ffmpeg.write(dedent("""\
     #!/usr/bin/env python
     import signal, sys, time
@@ -278,7 +278,7 @@ def test_bug_hangs(monkeypatch, tmpdir):
     HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song2.mp3'))
     HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song3.mp3'))
 
-    ffmpeg = tmpdir.ensure_dir('bin').join('ffmpeg')
+    ffmpeg = tmpdir.ensure('bin', 'ffmpeg')
     ffmpeg.write(dedent("""\
     #!/usr/bin/env python
     import signal, sys, time

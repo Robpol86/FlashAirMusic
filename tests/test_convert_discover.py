@@ -18,8 +18,8 @@ def test_song(tmpdir, mode):
     :param tmpdir: pytest fixture.
     :param str mode: Scenario to test for.
     """
-    source_file = tmpdir.ensure_dir('source').join('song.mp3')
-    target_file = tmpdir.ensure_dir('target').join('song.mp3')
+    source_file = tmpdir.ensure('source', 'song.mp3')
+    target_file = tmpdir.ensure('target', 'song.mp3')
     HERE.join('1khz_sine.mp3').copy(source_file)
 
     # Write metadata.
