@@ -126,19 +126,28 @@ def test_upload_cleanup_upload_files(monkeypatch, tmpdir, caplog, exc):
     :param caplog: pytest extension fixture.
     :param exception exc: Exception to test for.
     """
-    def func(*_):
+    attrs = list()
+
+    def func(*args):
         """Mock function.
 
-        :param _: unused.
+        :param list args: Arguments given by caller.
         """
         if exc:
             raise exc('Error')
+        attrs.extend(args[1])
     monkeypatch.setattr(run, 'initialize_upload', lambda *_: None)
     monkeypatch.setattr(run, 'delete_files_dirs', lambda *_: None)
     monkeypatch.setattr(run, 'upload_files', func)
 
     HERE.join('1khz_sine.mp3').copy(tmpdir.join('song.mp3'))
-    songs = [Song(str(tmpdir.join('song.mp3')), str(tmpdir), '/MUSIC', dict())]
+    HERE.join('1khz_sine.mp3').copy(tmpdir.join('bigger.mp3'))
+    tmpdir.join('bigger.mp3').write(b'\x00' * 1024, mode='ab')
+    songs = [
+        Song(str(tmpdir.join('song.mp3')), str(tmpdir), '/MUSIC', dict()),
+        Song(str(tmpdir.join('bigger.mp3')), str(tmpdir), '/MUSIC', dict()),
+    ]
+    assert songs[0].live_metadata['source_size'] < songs[1].live_metadata['source_size']
 
     if exc == FlashAirNetworkError:
         with pytest.raises(FlashAirNetworkError):
@@ -147,5 +156,90 @@ def test_upload_cleanup_upload_files(monkeypatch, tmpdir, caplog, exc):
         run.upload_cleanup('', songs, list(), TZINFO, asyncio.Future())
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
-    assert 'Uploading 1 song(s).' in messages
+    assert 'Uploading 2 song(s).' in messages
     assert 'Deleting 1 file(s)/dir(s) on the FlashAir card.' not in messages
+
+    if exc:
+        expected = list()
+    else:
+        expected = [
+            (songs[0].source, songs[0].target, songs[0].live_metadata['source_mtime']),
+            (songs[1].source, songs[1].target, songs[1].live_metadata['source_mtime']),
+        ]
+    assert attrs == expected
+
+
+@pytest.mark.parametrize('mode', ['shutdown', 'nothing to do', 'success'])
+def test_run_quick(monkeypatch, caplog, mode):
+    """Test run() without needing to iterate.
+
+    :param monkeypatch: pytest fixture.
+    :param caplog: pytest extension fixture.
+    :param str mode: Scenario to test for.
+    """
+    monkeypatch.setattr(run, 'scan', lambda *_: (list(), [] if mode == 'nothing to do' else ['/MUSIC/empty'], None))
+    monkeypatch.setattr(run, 'upload_cleanup', lambda *_: None)
+
+    shutdown_future = asyncio.Future()
+    if mode == 'shutdown':
+        shutdown_future.set_result(True)
+
+    # Run.
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(run.run(asyncio.Semaphore(), '', shutdown_future))
+    messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
+
+    if mode == 'shutdown':
+        expected = [
+            'Waiting for semaphore...',
+            'Got semaphore lock.',
+            'Service shutdown initiated, stop trying to update FlashAir card.',
+            'Released lock.',
+            'Failed to fully update FlashAir card. Maybe next time.',
+        ]
+    elif mode == 'nothing to do':
+        expected = [
+            'Waiting for semaphore...',
+            'Got semaphore lock.',
+            'Released lock.',
+            'No changes detected on FlashAir card.',
+        ]
+    else:
+        expected = [
+            'Waiting for semaphore...',
+            'Got semaphore lock.',
+            'Released lock.',
+            'Done updating FlashAir card.',
+        ]
+    assert messages == expected
+
+
+@pytest.mark.parametrize('mode', ['delay', 'timeout'])
+def test_run_slow(monkeypatch, caplog, mode):
+    """Test run() with multiple iterations.
+
+    :param monkeypatch: pytest fixture.
+    :param caplog: pytest extension fixture.
+    :param str mode: Scenario to test for.
+    """
+    def func(*_):
+        """Mock function.
+
+        :param _: Unused.
+        """
+        if mode == 'timeout' or not hasattr(func, 'already_ran'):
+            setattr(func, 'already_ran', True)
+            raise FlashAirNetworkError('Error')
+    monkeypatch.setattr(run, 'GIVE_UP_AFTER', 5)
+    monkeypatch.setattr(run, 'scan', lambda *_: (list(), ['/MUSIC/empty'], None))
+    monkeypatch.setattr(run, 'upload_cleanup', func)
+
+    # Run.
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(run.run(asyncio.Semaphore(), '', asyncio.Future()))
+    messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
+
+    if mode == 'timeout':
+        assert messages[-1] == 'Failed to fully update FlashAir card. Maybe next time.'
+    else:
+        assert messages[-1] == 'Done updating FlashAir card.'

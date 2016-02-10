@@ -1,11 +1,15 @@
 """Main functions/coroutines that fire directory walking, song uploads, file/dir deletion, and retry logic."""
 
+import asyncio
 import logging
+import time
 
 from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
 from flash_air_music.exceptions import FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
 from flash_air_music.upload.discover import files_dirs_to_delete, get_songs
 from flash_air_music.upload.interface import delete_files_dirs, get_card_time_zone, initialize_upload, upload_files
+
+GIVE_UP_AFTER = 300  # Retry for 5 minutes when network errors occur (packet loss, etc).
 
 
 def scan(ip_addr, shutdown_future):
@@ -69,3 +73,44 @@ def upload_cleanup(ip_addr, songs, delete_paths, tzinfo, shutdown_future):
         raise  # To be handled in caller.
     except FlashAirError:
         log.exception('Unexpected exception.')
+
+
+@asyncio.coroutine
+def run(semaphore, ip_addr, shutdown_future):
+    """Wait for semaphore and then try to run scan() and upload_cleanup() within GIVE_UP_AFTER. Retry on network error.
+
+    :param asyncio.Semaphore semaphore: Semaphore() instance.
+    :param str ip_addr: IP address of FlashAir to connect to.
+    :param asyncio.Future shutdown_future: Shutdown signal.
+    """
+    log = logging.getLogger(__name__)
+    log.debug('Waiting for semaphore...')
+    sleep_for = 2
+    success = False
+    changed = False
+    with (yield from semaphore):
+        log.debug('Got semaphore lock.')
+        start_time = time.time()
+        while time.time() - start_time < GIVE_UP_AFTER:
+            if shutdown_future.done():
+                log.info('Service shutdown initiated, stop trying to update FlashAir card.')
+                break
+            try:
+                songs, delete_paths, tzinfo = scan(ip_addr, shutdown_future)
+                if songs or delete_paths:
+                    upload_cleanup(ip_addr, songs, delete_paths, tzinfo, shutdown_future)
+                    changed = True
+            except FlashAirNetworkError:
+                log.info('Lost connection to FlashAir card. Retrying in %s seconds...', sleep_for)
+                yield from asyncio.sleep(sleep_for)
+                sleep_for += 1
+            else:
+                success = True
+                break
+    log.debug('Released lock.')
+    if changed:
+        log.info('Done updating FlashAir card.')
+    elif not success:
+        log.info('Failed to fully update FlashAir card. Maybe next time.')
+    else:
+        log.info('No changes detected on FlashAir card.')
