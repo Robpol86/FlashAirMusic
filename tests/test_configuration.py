@@ -216,9 +216,9 @@ def test_validate_config_working_dir(monkeypatch, tmpdir, caplog, mode):
         assert messages[-1] == 'Music source dir cannot be in working directory.'
 
 
-@pytest.mark.parametrize('mode', ['missing', 'contiguous', 'hyphens', 'colons', 'spaces', 'bad'])
-def test_validate_config_mac_addr(monkeypatch, tmpdir, caplog, mode):
-    """Test _validate_config() --mac-addr validation via initialize_config().
+@pytest.mark.parametrize('mode', ['missing', 'ip', 'hostname', 'bad'])
+def test_validate_config_ip_addr(monkeypatch, tmpdir, caplog, mode):
+    """Test _validate_config() --ip-addr validation via initialize_config().
 
     :param monkeypatch: pytest fixture.
     :param tmpdir: pytest fixture.
@@ -229,24 +229,20 @@ def test_validate_config_mac_addr(monkeypatch, tmpdir, caplog, mode):
 
     # Setup argv.
     argv.extend(['run', '--music-source', str(tmpdir.ensure_dir('source'))])
-    if mode == 'contiguous':
-        argv.extend(['--mac-addr', 'aaBBccDDeeFF'])
-    elif mode == 'hyphens':
-        argv.extend(['--mac-addr', '00-aa-22-BB-33-cc'])
-    elif mode == 'colons':
-        argv.extend(['--mac-addr', '98:Ff:76:Ee:54:Dd'])
-    elif mode == 'spaces':
-        argv.extend(['--mac-addr', 'a1 b2 c3 d4 e5 f6'])
+    if mode == 'ip':
+        argv.extend(['--ip-addr', '127.0.0.1'])
+    elif mode == 'hostname':
+        argv.extend(['--ip-addr', 'flashair.home.net'])
     elif mode == 'bad':
-        argv.extend(['--mac-addr', 'Invalid'])
+        argv.extend(['--ip-addr', 'Inv@lid'])
 
     # Run.
     if mode != 'bad':
         configuration.initialize_config(doc)
         if mode == 'missing':
-            assert config['--mac-addr'] is None
+            assert config['--ip-addr'] is None
         else:
-            assert config['--mac-addr'] == argv[-1]
+            assert config['--ip-addr'] == argv[-1]
         return
 
     # Run.
@@ -255,7 +251,7 @@ def test_validate_config_mac_addr(monkeypatch, tmpdir, caplog, mode):
 
     # Verify.
     messages = [r.message for r in caplog.records]
-    assert messages[-1] == 'Invalid MAC address: Invalid'
+    assert messages[-1] == 'Invalid hostname/IP address: Inv@lid'
 
 
 @pytest.mark.parametrize('mode', ['default', '0', '1', '10', '5.5', 'a'])

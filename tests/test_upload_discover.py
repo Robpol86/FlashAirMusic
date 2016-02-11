@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from flash_air_music.exceptions import FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
+from flash_air_music.exceptions import FlashAirDirNotFoundError, FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
 from flash_air_music.upload import discover
 from tests import HERE, TZINFO
 
@@ -103,12 +103,20 @@ def test_get_songs(monkeypatch, tmpdir):
     remote_files['/MUSIC/delete.mp3'] = (existing.stat().size, existing.stat().mtime)
     songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, shutdown_future)
     assert len(songs) == 1
-    assert len(valid_targets) == 2
     assert songs[0].source == str(new)
     assert songs[0].target == '/MUSIC/new.mp3'
     assert sorted(valid_targets) == ['/MUSIC/existing.mp3', '/MUSIC/new.mp3']
     assert files == remote_files
     assert empty_dirs == remote_empty_dirs
+
+    # Test remote directory not found.
+    def func(*_):
+        """Raise exception."""
+        raise FlashAirDirNotFoundError('Error')
+    monkeypatch.setattr(discover, 'get_files', func)
+    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, shutdown_future)
+    assert sorted(s.target for s in songs) == ['/MUSIC/existing.mp3', '/MUSIC/new.mp3']
+    assert sorted(valid_targets) == ['/MUSIC/existing.mp3', '/MUSIC/new.mp3']
 
     # Test shutdown.
     shutdown_future.set_result(True)

@@ -17,7 +17,7 @@ FFMPEG_NOT_FOUND_LABEL = '<not found>'
 SIGNALS_INT_TO_NAME = {v: {a for a, b in vars(signal).items() if a.startswith('SIG') and b == v}
                        for k, v in vars(signal).items() if k.startswith('SIG')}
 GLOBAL_MUTABLE_CONFIG = dict()
-REGEX_MAC_ADDR = re.compile(r'^(?:[a-fA-F0-9]{2}[ :-]?){5}[a-fA-F0-9]{2}$')
+REGEX_IP_ADDR = re.compile(r'^[a-zA-Z0-9_.-]+$')
 
 
 def _get_arguments(doc):
@@ -88,9 +88,9 @@ def _validate_config(config):  # pylint:disable=too-many-branches
         logging.getLogger(__name__).error('Music source dir cannot be in working directory.')
         raise ConfigError
 
-    # --mac-addr
-    if config['--mac-addr'] and not REGEX_MAC_ADDR.match(config['--mac-addr']):
-        logging.getLogger(__name__).error('Invalid MAC address: %s', config['--mac-addr'])
+    # --ip-addr
+    if config['--ip-addr'] and not REGEX_IP_ADDR.match(config['--ip-addr']):
+        logging.getLogger(__name__).error('Invalid hostname/IP address: %s', config['--ip-addr'])
         raise ConfigError
 
     # --ffmpeg-bin

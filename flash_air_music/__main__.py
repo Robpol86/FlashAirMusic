@@ -12,8 +12,8 @@ Options:
     -f FILE --ffmpeg-bin=FILE   File path to ffmpeg binary.
                                 [default: {ffmpeg_default}]
     -h --help                   Show this screen.
+    -i ADDR --ip-addr=ADDR      FlashAir hostname/IP address.
     -l FILE --log=FILE          Log to file. Will be rotated daily.
-    -m ADDR --mac-addr=ADDR     FlashAir MAC Address (DHCP sniffing).
     -q --quiet                  Don't print anything to stdout/stderr.
     -s DIR --music-source=DIR   Source directory containing FLAC/MP3s.
                                 [default: ~/fam_music_source]

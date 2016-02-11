@@ -5,7 +5,7 @@ import os
 import unicodedata
 
 from flash_air_music.base_song import BaseSong
-from flash_air_music.exceptions import FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
+from flash_air_music.exceptions import FlashAirDirNotFoundError, FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
 from flash_air_music.upload.interface import DO_NOT_DELETE, get_files, REMOTE_ROOT_DIRECTORY
 
 MAX_LENGTH = 255
@@ -112,6 +112,9 @@ def get_songs(source_dir, ip_addr, tzinfo, shutdown_future):
         files, empty_dirs = get_files(ip_addr, tzinfo, REMOTE_ROOT_DIRECTORY, shutdown_future)
     except FlashAirNetworkError:
         raise  # To be handled (retired) in caller.
+    except FlashAirDirNotFoundError:
+        log.debug('Directory %s does not exist on FlashAir card.', REMOTE_ROOT_DIRECTORY)
+        files, empty_dirs = dict(), list()
     except FlashAirURLTooLong:
         log.exception('Got FlashAirURLTooLong, is %s too long?', REMOTE_ROOT_DIRECTORY)
         return songs, valid_targets, dict(), list()
