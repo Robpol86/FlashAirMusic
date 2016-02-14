@@ -6,7 +6,7 @@ import unicodedata
 
 from flash_air_music.base_song import BaseSong
 from flash_air_music.exceptions import FlashAirDirNotFoundError, FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
-from flash_air_music.upload.interface import DO_NOT_DELETE, get_files, REMOTE_ROOT_DIRECTORY
+from flash_air_music.upload.interface import DO_NOT_DELETE, epoch_to_ftime, get_files, REMOTE_ROOT_DIRECTORY
 
 MAX_LENGTH = 255
 TRANS_TABLE = str.maketrans(r'&<>:"\|?*', "+() '  . ")
@@ -22,15 +22,17 @@ class Song(BaseSong):
     :ivar str target: Target file path (absolute remote path to mp3 file).
     """
 
-    def __init__(self, source, source_dir, target_dir, remote_metadata):
+    def __init__(self, source, source_dir, target_dir, remote_metadata, tzinfo):
         """Constructor.
 
         :param str source: Absolute source file path.
         :param str source_dir: Root absolute source directory path.
         :param str target_dir: Root absolute target directory path.
         :param dict remote_metadata: File paths and file metadata from the FlashAir API [from get_remote_songs()].
+        :param datetime.timezone tzinfo: Timezone the card is set to.
         """
         self.remote_metadata = remote_metadata
+        self.tzinfo = tzinfo
         super().__init__(source, source_dir, target_dir)
 
     def _generate_target_path(self, source_dir, target_dir):
@@ -68,12 +70,18 @@ class Song(BaseSong):
             return
         remote_metadata = self.remote_metadata[self.target]
         self.stored_metadata['source_size'] = int(remote_metadata[0])
-        self.stored_metadata['source_mtime'] = int(remote_metadata[1])
+        self.stored_metadata['source_mtime'] = int(remote_metadata[1]) & ~1
 
     @property
     def attrs(self):
         """Return attributes of this song expected by upload.upload_files(). Include extra item for sorting."""
-        return self.source, self.target, self.live_metadata['source_mtime'], self.live_metadata['source_size']
+        mtime = epoch_to_ftime(self.live_metadata['source_mtime'], self.tzinfo)
+        return self.source, self.target, mtime, self.live_metadata['source_size']
+
+    def refresh_live_metadata(self):
+        """Need to make number even due to half a second precision loss with FILETIME conversion."""
+        super().refresh_live_metadata()
+        self.live_metadata['source_mtime'] &= ~1  # http://stackoverflow.com/a/22154943/1198943
 
 
 def walk_source(source_dir):
@@ -126,7 +134,7 @@ def get_songs(source_dir, ip_addr, tzinfo, shutdown_future):
 
     # Get local files.
     for path in walk_source(source_dir):
-        song = Song(path, source_dir, target_dir, files)
+        song = Song(path, source_dir, target_dir, files, tzinfo)
         valid_targets.append(song.target)
         if song.needs_action:
             songs.append(song)

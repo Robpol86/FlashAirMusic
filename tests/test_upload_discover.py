@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from flash_air_music.exceptions import FlashAirDirNotFoundError, FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
-from flash_air_music.upload import discover
+from flash_air_music.upload import discover, interface
 from tests import HERE, TZINFO
 
 
@@ -29,13 +29,18 @@ def test_song(tmpdir, mode):
         remote_metadata['/MUSIC/song.mp3'][1] -= 20
 
     # Run.
-    song = discover.Song(str(source), source.dirname, '/MUSIC', remote_metadata)
+    song = discover.Song(str(source), source.dirname, '/MUSIC', remote_metadata, TZINFO)
+    attrs = song.attrs
 
     # Verify.
     assert song.source == str(source)
     assert song.target == '/MUSIC/song.mp3'
     assert song.needs_action is (False if mode == 'up to date' else True)
-    assert song.attrs == (str(source), '/MUSIC/song.mp3', int(source.stat().mtime), int(source.stat().size))
+    assert len(attrs) == 4
+    assert attrs[0] == str(source)
+    assert attrs[1] == '/MUSIC/song.mp3'
+    assert attrs[2] == interface.epoch_to_ftime(source.stat().mtime, TZINFO)
+    assert attrs[3] == int(source.stat().size)
 
 
 def test_song_path(tmpdir):
@@ -50,7 +55,7 @@ def test_song_path(tmpdir):
     target_dir = '/'.join(['', 'MUSIC', 'a' * 100, 'b' * 120, 'c' * 140, 'd'])
 
     # Run.
-    song = discover.Song(str(source_file), source_file.dirname, target_dir, dict())
+    song = discover.Song(str(source_file), source_file.dirname, target_dir, dict(), TZINFO)
 
     # Verify.
     assert song.source == str(source_file)
@@ -60,7 +65,7 @@ def test_song_path(tmpdir):
 
     # Test too long path. Too long path will be handled in caller function.
     target_dir = '/'.join(['', 'MUSIC'] + (['0000000000'] * 55))
-    song = discover.Song(str(source_file), source_file.dirname, target_dir, dict())
+    song = discover.Song(str(source_file), source_file.dirname, target_dir, dict(), TZINFO)
     assert song.source == str(source_file)
     assert song.target == '/MUSIC/' + ('00000/' * 55) + 'song.mp3'
     assert len(song.target) > 255

@@ -7,6 +7,7 @@ import pytest
 from flash_air_music.exceptions import FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
 from flash_air_music.upload import run
 from flash_air_music.upload.discover import Song
+from flash_air_music.upload.interface import epoch_to_ftime
 from tests import HERE, TZINFO
 
 
@@ -61,7 +62,7 @@ def test_upload_cleanup_initialize_upload(monkeypatch, tmpdir, caplog, exc):
     monkeypatch.setattr(run, 'upload_files', lambda *_: None)
 
     HERE.join('1khz_sine.mp3').copy(tmpdir.join('song.mp3'))
-    songs = [Song(str(tmpdir.join('song.mp3')), str(tmpdir), '/MUSIC', dict())]
+    songs = [Song(str(tmpdir.join('song.mp3')), str(tmpdir), '/MUSIC', dict(), TZINFO)]
     delete_paths = ['/MUSIC/empty']
 
     if exc == FlashAirNetworkError:
@@ -144,8 +145,8 @@ def test_upload_cleanup_upload_files(monkeypatch, tmpdir, caplog, exc):
     HERE.join('1khz_sine.mp3').copy(tmpdir.join('bigger.mp3'))
     tmpdir.join('bigger.mp3').write(b'\x00' * 1024, mode='ab')
     songs = [
-        Song(str(tmpdir.join('song.mp3')), str(tmpdir), '/MUSIC', dict()),
-        Song(str(tmpdir.join('bigger.mp3')), str(tmpdir), '/MUSIC', dict()),
+        Song(str(tmpdir.join('song.mp3')), str(tmpdir), '/MUSIC', dict(), TZINFO),
+        Song(str(tmpdir.join('bigger.mp3')), str(tmpdir), '/MUSIC', dict(), TZINFO),
     ]
     assert songs[0].live_metadata['source_size'] < songs[1].live_metadata['source_size']
 
@@ -163,8 +164,8 @@ def test_upload_cleanup_upload_files(monkeypatch, tmpdir, caplog, exc):
         expected = list()
     else:
         expected = [
-            (songs[0].source, songs[0].target, songs[0].live_metadata['source_mtime']),
-            (songs[1].source, songs[1].target, songs[1].live_metadata['source_mtime']),
+            (songs[0].source, songs[0].target, epoch_to_ftime(songs[0].live_metadata['source_mtime'], TZINFO)),
+            (songs[1].source, songs[1].target, epoch_to_ftime(songs[1].live_metadata['source_mtime'], TZINFO)),
         ]
     assert attrs == expected
 

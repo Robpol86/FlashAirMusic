@@ -10,6 +10,20 @@ from flash_air_music.upload import api, interface
 from tests import HERE, TZINFO
 
 
+def test_datetime_to_ftime_ftime_to_epoch():
+    """Test both time functions.
+
+    Comparing against the same number or +1 because conversion to 16-bit time number involves dividing seconds by 2 and
+    rounding down.
+    """
+    start_time = 1455394075
+    end_time = start_time + 604800  # 1 week later.
+    for epoch in range(start_time, end_time):
+        ftime = interface.epoch_to_ftime(epoch, TZINFO)
+        epoch2 = interface.ftime_to_epoch(int(ftime[2:6], 16), int(ftime[6:], 16), TZINFO)
+        assert epoch == epoch2 or epoch == epoch2 + 1
+
+
 def test_get_card_time_zone(monkeypatch):
     """Test get_card_time_zone().
 
@@ -378,7 +392,7 @@ def test_upload_files(monkeypatch, shutdown):
         shutdown_future.set_result(True)
         expected = list()
     else:
-        expected = [(str(HERE.join('1khz_sine.mp3')), '_fam_staged.bin 1454388430 /MUSIC/song.mp3')]
+        expected = [(str(HERE.join('1khz_sine.mp3')), '/MUSIC/_fam_staged.bin 1454388430 /MUSIC/song.mp3')]
 
     files_attrs = [(str(HERE.join('1khz_sine.mp3')), '/MUSIC/song.mp3', 1454388430)]
     interface.upload_files('flashair', files_attrs, shutdown_future)

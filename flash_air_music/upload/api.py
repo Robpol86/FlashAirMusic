@@ -31,7 +31,7 @@ def requests_get_post(url, stream=None, file_name=None):
             log.debug('Querying url %s', url)
             response = requests.get(url, timeout=5)
         else:
-            log.debug('POSTing to %s', url)
+            log.debug('POSTing to %s with file name %s', url, file_name)
             response = requests.post(url, files={'file': (file_name, stream)}, timeout=5)
     except requests.Timeout:
         if GLOBAL_MUTABLE_CONFIG['--verbose']:

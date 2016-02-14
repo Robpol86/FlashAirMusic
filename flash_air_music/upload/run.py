@@ -101,16 +101,18 @@ def run(semaphore, ip_addr, shutdown_future):
                     upload_cleanup(ip_addr, songs, delete_paths, tzinfo, shutdown_future)
                     changed = True
             except FlashAirNetworkError:
-                log.info('Lost connection to FlashAir card. Retrying in %s seconds...', sleep_for)
+                log.warning('Lost connection to FlashAir card. Retrying in %s seconds...', sleep_for)
                 yield from asyncio.sleep(sleep_for)
                 sleep_for += 1
             else:
                 success = True
                 break
+        else:
+            log.error('Retried too many times, giving up.')
     log.debug('Released lock.')
     if changed:
         log.info('Done updating FlashAir card.')
     elif not success:
-        log.info('Failed to fully update FlashAir card. Maybe next time.')
+        log.error('Failed to fully update FlashAir card. Maybe next time.')
     else:
         log.info('No changes detected on FlashAir card.')

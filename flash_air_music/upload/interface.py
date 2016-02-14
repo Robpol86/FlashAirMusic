@@ -4,33 +4,35 @@ import datetime
 import logging
 import os
 import re
+import time
 
 from flash_air_music import exceptions
 from flash_air_music.upload import api
 
 LUA_HELPER_SCRIPT = os.path.join(os.path.dirname(__file__), '_fam_move_touch.lua')
-REMOTE_ROOT_DIRECTORY = '/MUSIC'  # Must not be more than 1 level deep due to API constraints and my laziness.
+REMOTE_ROOT_DIRECTORY = '/MUSIC'  # Must not be more than 1 level and have no spaces.
 DO_NOT_DELETE = (REMOTE_ROOT_DIRECTORY, '')
 UPLOAD_STAGE_NAME = '_fam_staged.bin'
 
 
-def datetime_to_ftime(tzinfo):
+def epoch_to_ftime(epoch, tzinfo):
     """Current time in DOS/Win32 FILEDATE/FILETIME format.
 
     From: https://flashair-developers.com/en/documents/tutorials/advanced/2/
 
+    :param int epoch: Seconds since Unix epoch (right now if 0).
     :param datetime.timezone tzinfo: Timezone the card is set to.
 
     :return: Current FILETIME formatted in a string as a 32bit hex number.
     :rtype: str
     """
-    now = datetime.datetime.now(tzinfo)
-    year = (now.year - 1980) << 9
-    month = now.month << 5
-    day = now.day
-    hour = now.hour << 11
-    minute = now.minute << 5
-    second = now.second // 2
+    date = datetime.datetime.fromtimestamp(epoch or time.time(), tzinfo)
+    year = (date.year - 1980) << 9
+    month = date.month << 5
+    day = date.day
+    hour = date.hour << 11
+    minute = date.minute << 5
+    second = date.second // 2  # Loses precision of half a second.
     return '0x{:x}{:x}'.format(year + month + day, hour + minute + second)
 
 
@@ -164,7 +166,7 @@ def initialize_upload(ip_addr, tzinfo):
     log = logging.getLogger(__name__)
 
     # Prepare card via upload.cgi.
-    api.upload_ftime_updir_writeprotect(ip_addr, REMOTE_ROOT_DIRECTORY, datetime_to_ftime(tzinfo))
+    api.upload_ftime_updir_writeprotect(ip_addr, REMOTE_ROOT_DIRECTORY, epoch_to_ftime(0, tzinfo))
 
     # Upload helper script if not there.
     try:
@@ -201,14 +203,15 @@ def upload_files(ip_addr, files_attrs, shutdown_future):
     """
     log = logging.getLogger(__name__)
     script_path = '{}/{}'.format(REMOTE_ROOT_DIRECTORY, os.path.basename(LUA_HELPER_SCRIPT))
+    stage_path = '{}/{}'.format(REMOTE_ROOT_DIRECTORY, UPLOAD_STAGE_NAME)
 
     for source, destination, mtime in files_attrs:
         if shutdown_future.done():
             logging.getLogger(__name__).info('Service shutdown initiated, stop uploading songs.')
             break
-        log.info('Uploading to %s/%s', REMOTE_ROOT_DIRECTORY, UPLOAD_STAGE_NAME)
+        log.info('Uploading to %s', stage_path)
         with open(source, mode='rb') as handle:
             api.upload_upload_file(ip_addr, UPLOAD_STAGE_NAME, handle)
-        log.info('Moving to %s and setting mtime %d', destination, mtime)
-        script_argv = '{} {} {}'.format(UPLOAD_STAGE_NAME, mtime, destination)
+        log.info('Moving to %s and setting FILETIME mtime %s', destination, mtime)
+        script_argv = '{} {} {}'.format(stage_path, mtime, destination)
         api.lua_script_execute(ip_addr, script_path, script_argv)
