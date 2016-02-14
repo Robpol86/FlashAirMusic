@@ -10,7 +10,7 @@ from flash_air_music.upload.interface import DO_NOT_DELETE, epoch_to_ftime, get_
 
 MAX_LENGTH = 255
 TRANS_TABLE = str.maketrans(r'&<>:"\|?*', "+() '  . ")
-WHITE_LIST = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%'()+,-;=@]^_`{}~./"
+WHITE_LIST = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%'()+,-;=@]^_`{}~./ "
 
 
 class Song(BaseSong):

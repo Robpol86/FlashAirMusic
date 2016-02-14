@@ -140,11 +140,13 @@ def delete_files_dirs(ip_addr, paths, shutdown_future):
     :param iter paths: List of file/dir paths to remove.
     :param asyncio.Future shutdown_future: Shutdown signal.
     """
+    log = logging.getLogger(__name__)
     sorted_paths = sorted((p for p in paths if p.rstrip('/') not in DO_NOT_DELETE), reverse=True)
     for path in sorted_paths:
         if shutdown_future.done():
             logging.getLogger(__name__).info('Service shutdown initiated, stop deleting items.')
             break
+        log.info('Deleting: %s', path)
         api.upload_delete(ip_addr, path)
 
 
@@ -209,9 +211,10 @@ def upload_files(ip_addr, files_attrs, shutdown_future):
         if shutdown_future.done():
             logging.getLogger(__name__).info('Service shutdown initiated, stop uploading songs.')
             break
-        log.info('Uploading to %s', stage_path)
+        log.info('Uploading file: %s', source)
+        log.debug('Uploading to %s', stage_path)
         with open(source, mode='rb') as handle:
             api.upload_upload_file(ip_addr, UPLOAD_STAGE_NAME, handle)
-        log.info('Moving to %s and setting FILETIME mtime %s', destination, mtime)
+        log.debug('Moving to %s and setting mtime %s', destination, mtime)
         script_argv = '{} {} {}'.format(stage_path, mtime, destination)
         api.lua_script_execute(ip_addr, script_path, script_argv)

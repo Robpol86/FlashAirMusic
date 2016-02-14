@@ -9,13 +9,13 @@
 MAX_MTIME = 2425961518
 MIN_MTIME = 1212980759
 
-arg_source = (arg[1] or ''):gsub("^%s*(.-)%s*$", "%1")  -- FlashAir seems to add a newline on the last arg item.
-arg_mtime = (arg[2] or ''):gsub("^%s*(.-)%s*$", "%1")
-arg_destination = table.concat({select(3, unpack(arg))}, ' '):gsub("^%s*(.-)%s*$", "%1")
+arg_source = (arg[1] or ''):gsub('^%s*(.-)%s*$', '%1')  -- FlashAir seems to add a newline on the last arg item.
+arg_mtime = (arg[2] or ''):gsub('^%s*(.-)%s*$', '%1')
+arg_destination = table.concat({select(3, unpack(arg))}, ' '):gsub('^%s*(.-)%s*$', '%1')
 return_data = {error='', arg_source=arg_source, arg_mtime=arg_mtime, arg_destination=arg_destination}
 
 
--- Error function.
+-- Terminate program early.
 function exit(status, message)
     if message then return_data['error'] = message end
     print(('HTTP/1.1 %s'):format(status))
@@ -28,6 +28,33 @@ end
 -- String endswith. From: http://lua-users.org/wiki/StringRecipes
 function string.endswith(str, tail)
    return tail == '' or string.sub(str, -string.len(tail)) == tail
+end
+
+-- Parent directory path.
+function dirname(path)
+    if path:sub(-1) == '/' then path = path:gsub('^(.-)/*$', '%1') end  -- rstrip / characters.
+    local parent, count = path:gsub('^(.*)/.-$', '%1')
+    if count == 0 then return '' end  -- dirname('file') == ''
+    if parent == '' then return '/' end  -- dirname('/dir') == '/'
+    return parent
+end
+
+-- Recursive mkdir.
+function mkdir_p(path)
+    local path = path:gsub('^/*(/.-)$', '%1'):gsub('^(.-)/*$', '%1'):gsub('//+', '/')
+    if path == '' or lfs.attributes(path) then return false end
+    local dir
+    local pos = 1
+    if path:sub(1, 1) == '/' then pos = 2 end
+    while true do
+        pos = path:find('/', pos)
+        if not pos then break end
+        dir = path:sub(0, pos - 1)
+        if not lfs.attributes(dir) then lfs.mkdir(dir) end
+        pos = pos + 1
+    end
+    lfs.mkdir(path)
+    return true
 end
 
 -- Get current time in FTIME format.
@@ -80,9 +107,16 @@ if arg_destination == '' then exit('400 Bad Request', 'arg_destination (arg[3:])
 if not arg_destination:endswith('.mp3') then exit('400 Bad Request', "arg_destination doesn't end with .mp3.") end
 
 
+-- Prepare destination.
+if lfs.attributes(arg_destination) then
+    fa.remove(arg_destination)
+elseif not lfs.attributes(dirname(arg_destination)) then
+    mkdir_p(dirname(arg_destination))
+end
+
+
 -- Touch and move.
 touch(arg_source, arg_mtime)
-fa.remove(arg_destination)
 fa.rename(arg_source, arg_destination)
 
 
