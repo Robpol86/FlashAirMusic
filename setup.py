@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Setup script for the project."""
 
 from __future__ import print_function

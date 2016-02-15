@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 export MODE_MAJOR ?= $(shell python -c "import os; print(os.environ.get('MODE', '').split(':')[0])")
 export NAME ?= $(shell ./setup.py --name)
 export SUMMARY ?= $(shell ./setup.py --description |sed 's/\.$$//')
@@ -13,8 +14,9 @@ clean:
 pre:
 	rpmdev-setuptree
 
+sdist: BIN_PYTHON = $(shell type -p python3 || type -p python3.4 || echo python)
 sdist:
-	./setup.py sdist
+	$(BIN_PYTHON) setup.py sdist
 	mv dist/$(NAME)-$(VERSION).tar.gz $(HOME)/rpmbuild/SOURCES/
 
 rpm:
