@@ -15,4 +15,5 @@ RUN dnf install -y \
     python3-pytest
 RUN dnf install -y $NAME-$VERSION-*.rpm
 RUN pip3 install pytest-catchlog pytest-httpretty
+RUN groupadd -r user && useradd -r -g user user
 CMD /lib/systemd/systemd

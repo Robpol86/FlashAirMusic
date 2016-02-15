@@ -1,3 +1,4 @@
+export MODE_MAJOR := $(shell python -c "import os; print(os.environ.get('MODE', '').split(':')[0])")
 export NAME := $(shell ./setup.py --name)
 export SUMMARY := $(shell ./setup.py --description |sed 's/\.$$//')
 export URL := $(shell ./setup.py --url)
@@ -27,10 +28,10 @@ install:
 	dnf -y install $(NAME)-$(VERSION)-*.rpm
 
 docker-build:
-	cat DockerfileTemplates/DockerfileFedoraBuild |envsubst > Dockerfile
+	cat DockerfileTemplates/Dockerfile_$(MODE_MAJOR)_Build |envsubst > Dockerfile
 	docker build -t build/$(MODE) .
 	docker run -v ${PWD}:/build build/$(MODE) make
-	cat DockerfileTemplates/DockerfileFedoraRun |envsubst > Dockerfile
+	cat DockerfileTemplates/Dockerfile_$(MODE_MAJOR)_Run |envsubst > Dockerfile
 	docker build -t run/$(MODE) .
 	rm Dockerfile
 
