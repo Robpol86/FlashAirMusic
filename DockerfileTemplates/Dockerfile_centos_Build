@@ -7,7 +7,7 @@ VOLUME /build
 ADD $NAME.spec README.rst /build/
 WORKDIR /build
 
-ENV NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
+ENV MODE_MAJOR="$MODE_MAJOR" NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
 
 RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 RUN yum-builddep -y $NAME.spec

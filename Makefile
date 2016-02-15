@@ -1,8 +1,8 @@
-export MODE_MAJOR := $(shell python -c "import os; print(os.environ.get('MODE', '').split(':')[0])")
-export NAME := $(shell ./setup.py --name)
-export SUMMARY := $(shell ./setup.py --description |sed 's/\.$$//')
-export URL := $(shell ./setup.py --url)
-export VERSION := $(shell ./setup.py --version)
+export MODE_MAJOR ?= $(shell python -c "import os; print(os.environ.get('MODE', '').split(':')[0])")
+export NAME ?= $(shell ./setup.py --name)
+export SUMMARY ?= $(shell ./setup.py --description |sed 's/\.$$//')
+export URL ?= $(shell ./setup.py --url)
+export VERSION ?= $(shell ./setup.py --version)
 
 all: clean pre sdist rpm
 
