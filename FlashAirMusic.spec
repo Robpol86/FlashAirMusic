@@ -1,5 +1,5 @@
 BuildArch:          noarch
-BuildRequires:      python3-devel
+BuildRequires:      /usr/lib/rpm/macros.d/macros.python3.4
 BuildRequires:      systemd
 Group:              Development/Libraries
 License:            MIT

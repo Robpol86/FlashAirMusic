@@ -7,7 +7,7 @@ VOLUME /build
 ADD $NAME-$VERSION-*.rpm /build/
 WORKDIR /build
 
-RUN dnf install -y http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-23.noarch.rpm
-RUN dnf install -y make procps $NAME-$VERSION-*.rpm
+RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+RUN yum install -y $NAME-$VERSION-*.rpm
 
 CMD /lib/systemd/systemd

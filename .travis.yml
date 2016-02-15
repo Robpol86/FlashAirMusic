@@ -25,4 +25,9 @@ matrix:
     install: make docker-build
     script: make docker-test
 
+  - env: MODE=centos:7
+    services: [docker]
+    install: make docker-build
+    script: make docker-test
+
 sudo: required

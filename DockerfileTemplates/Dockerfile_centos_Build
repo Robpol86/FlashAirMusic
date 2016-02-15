@@ -1,0 +1,14 @@
+# Dockerfile template for building RPMs.
+# $MODE, $NAME, and others are defined in .travis.yml and Makefile by envsubst.
+
+FROM robpol86/rpmdevtools-$MODE
+
+VOLUME /build
+ADD $NAME.spec README.rst /build/
+WORKDIR /build
+
+ENV NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
+
+RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+RUN yum-builddep -y $NAME.spec
+RUN echo 'addFilter("E: dir-or-file-in-home")' >> /etc/rpmlint/config
