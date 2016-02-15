@@ -33,6 +33,7 @@ import sys
 from flash_air_music.configuration import initialize_config, SIGNALS_INT_TO_NAME, update_config
 from flash_air_music.convert.triggers import EVERY_SECONDS_PERIODIC, periodically_convert, watch_directory
 from flash_air_music.exceptions import BaseError
+from flash_air_music.upload.triggers import watch_for_flashair
 
 
 def main():
@@ -50,6 +51,7 @@ def main():
     log.info('Scheduling periodic tasks.')
     loop.call_later(EVERY_SECONDS_PERIODIC, loop.create_task, periodically_convert(loop, semaphore, shutdown_future))
     loop.create_task(watch_directory(loop, semaphore, shutdown_future))
+    loop.create_task(watch_for_flashair(semaphore, shutdown_future))
 
     log.info('Running main loop.')
     loop.run_forever()

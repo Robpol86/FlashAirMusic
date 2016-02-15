@@ -60,7 +60,7 @@ def test_run_upload_one(tmpdir_module, caplog):
     """
     # Run.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run.run(asyncio.Semaphore(), IP_ADDR, asyncio.Future()))
+    success = loop.run_until_complete(run.run(asyncio.Semaphore(), IP_ADDR, asyncio.Future()))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
     errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelno > logging.INFO]
 
@@ -72,6 +72,7 @@ def test_run_upload_one(tmpdir_module, caplog):
     actual = [m for m in messages if m.startswith('Deleting: ')]
     assert not actual
     assert 'Done updating FlashAir card.' in messages
+    assert success
 
     # Verify consistency.
     songs, delete_paths = run.scan(IP_ADDR, asyncio.Future())[:2]
@@ -91,7 +92,7 @@ def test_run_upload_subdir(tmpdir_module, caplog):
 
     # Run.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run.run(asyncio.Semaphore(), IP_ADDR, asyncio.Future()))
+    success = loop.run_until_complete(run.run(asyncio.Semaphore(), IP_ADDR, asyncio.Future()))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
     errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelno > logging.INFO]
 
@@ -107,6 +108,7 @@ def test_run_upload_subdir(tmpdir_module, caplog):
     actual = [m for m in messages if m.startswith('Deleting: ')]
     assert not actual
     assert 'Done updating FlashAir card.' in messages
+    assert success
 
     # Verify consistency.
     songs, delete_paths = run.scan(IP_ADDR, asyncio.Future())[:2]
@@ -128,7 +130,7 @@ def test_delete_and_spaces(tmpdir_module, caplog):
     for i in range(5, -1, -1):
         # Run.
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(run.run(asyncio.Semaphore(), IP_ADDR, asyncio.Future()))
+        success = loop.run_until_complete(run.run(asyncio.Semaphore(), IP_ADDR, asyncio.Future()))
         messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
         errors = [r.message for r in caplog.records if r.name.startswith('flash_air_mus') and r.levelno > logging.INFO]
 
@@ -138,6 +140,7 @@ def test_delete_and_spaces(tmpdir_module, caplog):
             assert messages[-1] == 'Done updating FlashAir card.'
         else:  # 0, last iter.
             assert messages[-1] == 'No changes detected on FlashAir card.'
+        assert success
 
         # Verify consistency.
         songs, delete_paths = run.scan(IP_ADDR, asyncio.Future())[:2]

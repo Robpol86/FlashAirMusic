@@ -82,6 +82,9 @@ def run(semaphore, ip_addr, shutdown_future):
     :param asyncio.Semaphore semaphore: Semaphore() instance.
     :param str ip_addr: IP address of FlashAir to connect to.
     :param asyncio.Future shutdown_future: Shutdown signal.
+
+    :return: If sync was successful.
+    :rtype: bool
     """
     log = logging.getLogger(__name__)
     log.debug('Waiting for semaphore...')
@@ -116,3 +119,4 @@ def run(semaphore, ip_addr, shutdown_future):
         log.error('Failed to fully update FlashAir card. Maybe next time.')
     else:
         log.info('No changes detected on FlashAir card.')
+    return success

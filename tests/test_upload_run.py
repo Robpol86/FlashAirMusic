@@ -187,7 +187,7 @@ def test_run_quick(monkeypatch, caplog, mode):
 
     # Run.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run.run(asyncio.Semaphore(), '', shutdown_future))
+    success = loop.run_until_complete(run.run(asyncio.Semaphore(), '', shutdown_future))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     if mode == 'shutdown':
@@ -198,6 +198,7 @@ def test_run_quick(monkeypatch, caplog, mode):
             'Released lock.',
             'Failed to fully update FlashAir card. Maybe next time.',
         ]
+        assert not success
     elif mode == 'nothing to do':
         expected = [
             'Waiting for semaphore...',
@@ -205,6 +206,7 @@ def test_run_quick(monkeypatch, caplog, mode):
             'Released lock.',
             'No changes detected on FlashAir card.',
         ]
+        assert success
     else:
         expected = [
             'Waiting for semaphore...',
@@ -212,6 +214,7 @@ def test_run_quick(monkeypatch, caplog, mode):
             'Released lock.',
             'Done updating FlashAir card.',
         ]
+        assert success
     assert messages == expected
 
 
@@ -237,10 +240,12 @@ def test_run_slow(monkeypatch, caplog, mode):
 
     # Run.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run.run(asyncio.Semaphore(), '', asyncio.Future()))
+    success = loop.run_until_complete(run.run(asyncio.Semaphore(), '', asyncio.Future()))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     if mode == 'timeout':
         assert messages[-1] == 'Failed to fully update FlashAir card. Maybe next time.'
+        assert not success
     else:
         assert messages[-1] == 'Done updating FlashAir card.'
+        assert success
