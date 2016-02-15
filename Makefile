@@ -31,18 +31,20 @@ docker-build:
 	cat DockerfileTemplates/Dockerfile_$(MODE_MAJOR)_Build |envsubst > Dockerfile
 	docker build -t build/$(MODE) .
 	docker run -v ${PWD}:/build build/$(MODE) make
+	cat DockerfileTemplates/Dockerfile_$(MODE_MAJOR)_Lint |envsubst > Dockerfile
+	docker build -t lint/$(MODE) .
 	cat DockerfileTemplates/Dockerfile_$(MODE_MAJOR)_Run |envsubst > Dockerfile
 	docker build -t run/$(MODE) .
 	rm Dockerfile
 
-docker-run: DOCKER_CONTAINER_ID=$$(docker ps |grep run/$(MODE) |awk '{print $$1}')
-docker-run:
-	docker run -v ${PWD}:/build:ro run/$(MODE) make docker-rpmlint
-	docker run -v ${PWD}/tests:/build/tests:ro run/$(MODE) su -m user -c "py.test-3 tests"
+docker-test: DOCKER_CONTAINER_ID=$$(docker ps |grep run/$(MODE) |awk '{print $$1}')
+docker-test:
+	docker run -v ${PWD}:/build:ro lint/$(MODE) make docker-internal-lint
+	docker run -v ${PWD}/tests:/build/tests:ro lint/$(MODE) su -m user -c "py.test-3 tests"
 	docker run -v ${PWD}:/build:ro --privileged -dti run/$(MODE)
-	docker exec -ti $(DOCKER_CONTAINER_ID) make docker-rpmtest
+	docker exec -ti $(DOCKER_CONTAINER_ID) make docker-internal-run
 
-docker-rpmlint:
+docker-internal-lint:
 	systemd-analyze verify $(NAME).service
 	rpmlint $(NAME)
 	$(NAME) --help
@@ -52,10 +54,10 @@ docker-rpmlint:
 	test $$(rpm -q $(NAME) --queryformat '%{VERSION}') == "$(VERSION)"
 	test $$($(NAME) --version) == "$(VERSION)"
 
-docker-rpmtest: PATH_LOG := /var/log/$(NAME)/$(NAME).log
-docker-rpmtest: PATH_SONG1 := /home/$(NAME)/fam_working_dir/song1.mp3
-docker-rpmtest: PATH_SONG2 := /home/$(NAME)/fam_working_dir/song2.mp3
-docker-rpmtest:
+docker-internal-run: PATH_LOG := /var/log/$(NAME)/$(NAME).log
+docker-internal-run: PATH_SONG1 := /home/$(NAME)/fam_working_dir/song1.mp3
+docker-internal-run: PATH_SONG2 := /home/$(NAME)/fam_working_dir/song2.mp3
+docker-internal-run:
 	! test -f $(PATH_SONG1)
 	! test -f $(PATH_SONG2)
 	! test -f $(PATH_LOG)
