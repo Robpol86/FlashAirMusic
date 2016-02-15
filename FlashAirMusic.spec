@@ -1,4 +1,5 @@
 BuildArch:          noarch
+BuildRequires:      /usr/lib/python3.4/site-packages/setuptools
 BuildRequires:      /usr/lib/rpm/macros.d/macros.python3.4
 BuildRequires:      systemd
 Group:              Development/Libraries
