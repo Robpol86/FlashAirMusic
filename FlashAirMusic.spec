@@ -38,10 +38,10 @@ Version:            %{getenv:VERSION}
 %build
 %{__tar} -C %{base_module}/_3rdparty --strip 1 -xzf %{SOURCE1} docoptcfg-*/docoptcfg.py
 %{__tar} -C %{base_module}/_3rdparty --strip 1 -xzf %{SOURCE2} mutagen-*/mutagen
-%py3_build
+%{__python3} setup.py %{?py_setup_args} build --executable="%{__python3} %{py3_shbang_opts}"  # %py3_build
 
 %install
-%py3_install
+%{__python3} setup.py %{?py_setup_args} install -O1 --skip-build --root %{buildroot}  # %py3_install
 %{__install} -d -m 0755 %{buildroot}%{_localstatedir}/log/%{name}
 %{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/%{name}
 %{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/logrotate.d
