@@ -21,8 +21,8 @@ sdist:
 
 rpm:
 	cp $(NAME).spec $(HOME)/rpmbuild/SPECS/
-	spectool -g $(NAME).spec -C $(HOME)/rpmbuild/SOURCES
-	rpmbuild -ba $(NAME).spec
+	spectool -g $(HOME)/rpmbuild/SPECS/$(NAME).spec -C $(HOME)/rpmbuild/SOURCES
+	rpmbuild -ba $(HOME)/rpmbuild/SPECS/$(NAME).spec
 	mv $(HOME)/rpmbuild/RPMS/*/$(NAME)-$(VERSION)-*.rpm .
 
 install:
