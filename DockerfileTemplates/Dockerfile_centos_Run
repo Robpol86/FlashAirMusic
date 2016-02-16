@@ -10,6 +10,7 @@ WORKDIR /build
 ENV MODE_MAJOR="$MODE_MAJOR" NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
 
 RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+RUN yum install -y http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
 RUN yum install -y $NAME-$VERSION-*.rpm
 
 CMD /lib/systemd/systemd
