@@ -14,7 +14,7 @@ clean:
 pre:
 	rpmdev-setuptree
 
-sdist: BIN_PYTHON = $(shell type -p python3 || type -p python3.4 || echo python)
+sdist: BIN_PYTHON = $$(type -p python3 || type -p python3.4 || echo python)
 sdist:
 	$(BIN_PYTHON) setup.py sdist
 	mv dist/$(NAME)-$(VERSION).tar.gz $(HOME)/rpmbuild/SOURCES/
@@ -39,7 +39,7 @@ docker-build:
 	docker build -t run/$(MODE) .
 	rm Dockerfile
 
-docker-test: DOCKER_CONTAINER_ID=$(shell docker ps |grep run/$(MODE) |awk '{print $$1}')
+docker-test: DOCKER_CONTAINER_ID = $$(docker ps |grep run/$(MODE) |awk '{print $$1}')
 docker-test:
 	docker run -v ${PWD}:/build:ro lint/$(MODE) make docker-internal-lint
 	docker run -v ${PWD}/tests:/build/tests:ro lint/$(MODE) su -m user -c "py.test-3 tests"
@@ -50,11 +50,11 @@ docker-internal-lint:
 	systemd-analyze verify $(NAME).service
 	rpmlint $(NAME)
 	$(NAME) --help
-	test $(shell rpm -q $(NAME) --queryformat '%{NAME}') == "$(NAME)"
-	test "$(shell rpm -q $(NAME) --queryformat '%{SUMMARY}')" == "$(SUMMARY)"
-	test "$(shell rpm -q $(NAME) --queryformat '%{URL}')" == "$(URL)"
-	test $(shell rpm -q $(NAME) --queryformat '%{VERSION}') == "$(VERSION)"
-	test $(shell $(NAME) --version) == "$(VERSION)"
+	test $$(rpm -q $(NAME) --queryformat '%{NAME}') == "$(NAME)"
+	test "$$(rpm -q $(NAME) --queryformat '%{SUMMARY}')" == "$(SUMMARY)"
+	test "$$(rpm -q $(NAME) --queryformat '%{URL}')" == "$(URL)"
+	test $$(rpm -q $(NAME) --queryformat '%{VERSION}') == "$(VERSION)"
+	test $$($(NAME) --version) == "$(VERSION)"
 
 docker-internal-run: PATH_LOG := /var/log/$(NAME)/$(NAME).log
 docker-internal-run: PATH_SONG1 := /home/$(NAME)/fam_working_dir/song1.mp3
