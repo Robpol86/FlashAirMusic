@@ -6,8 +6,8 @@
 -- changed on FlashAirMusic server.
 -- https://github.com/Robpol86/FlashAirMusic
 
-MAX_MTIME = 2425961518
-MIN_MTIME = 1212980759
+MAX_MTIME = 4294967295  -- 0xFFFFFFFF
+MIN_MTIME = 1000000000
 
 arg_source = (arg[1] or ''):gsub('^%s*(.-)%s*$', '%1')  -- FlashAir seems to add a newline on the last arg item.
 arg_mtime = (arg[2] or ''):gsub('^%s*(.-)%s*$', '%1')
