@@ -1,8 +1,8 @@
-export MODE_MAJOR := $(shell python -c "import os; print(os.environ.get('MODE', '').split(':')[0])")
-export NAME := $(shell ./setup.py --name)
-export SUMMARY := $(shell ./setup.py --description |sed 's/\.$$//')
-export URL := $(shell ./setup.py --url)
-export VERSION := $(shell ./setup.py --version)
+export MODE_MAJOR ?= $(shell python -c "import os; print(os.environ.get('MODE', '').split(':')[0])")
+export NAME ?= $(shell ./setup.py --name)
+export SUMMARY ?= $(shell ./setup.py --description |sed 's/\.$$//')
+export URL ?= $(shell ./setup.py --url)
+export VERSION ?= $(shell ./setup.py --version)
 
 all: clean pre sdist rpm
 
@@ -19,8 +19,8 @@ sdist:
 
 rpm:
 	cp $(NAME).spec $(HOME)/rpmbuild/SPECS/
-	spectool -g $(NAME).spec -C $(HOME)/rpmbuild/SOURCES
-	rpmbuild -ba $(NAME).spec
+	spectool -g $(HOME)/rpmbuild/SPECS/$(NAME).spec -C $(HOME)/rpmbuild/SOURCES
+	rpmbuild -ba $(HOME)/rpmbuild/SPECS/$(NAME).spec
 	mv $(HOME)/rpmbuild/RPMS/*/$(NAME)-$(VERSION)-*.rpm .
 
 install:
@@ -37,7 +37,7 @@ docker-build:
 	docker build -t run/$(MODE) .
 	rm Dockerfile
 
-docker-test: DOCKER_CONTAINER_ID=$$(docker ps |grep run/$(MODE) |awk '{print $$1}')
+docker-test: DOCKER_CONTAINER_ID = $$(docker ps |grep run/$(MODE) |awk '{print $$1}')
 docker-test:
 	docker run -v ${PWD}:/build:ro lint/$(MODE) make docker-internal-lint
 	docker run -v ${PWD}/tests:/build/tests:ro lint/$(MODE) su -m user -c "py.test-3 tests"

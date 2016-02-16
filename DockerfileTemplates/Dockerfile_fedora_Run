@@ -7,9 +7,9 @@ VOLUME /build
 ADD $NAME-$VERSION-*.rpm /build/
 WORKDIR /build
 
-RUN dnf install -y \
-    http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-23.noarch.rpm \
-    http://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-23.noarch.rpm
+ENV MODE_MAJOR="$MODE_MAJOR" NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
+
+RUN dnf install -y http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-23.noarch.rpm
 RUN dnf install -y make procps $NAME-$VERSION-*.rpm
 
 CMD /lib/systemd/systemd
