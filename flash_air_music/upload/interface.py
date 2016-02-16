@@ -170,14 +170,7 @@ def initialize_upload(ip_addr, tzinfo):
     # Prepare card via upload.cgi.
     api.upload_ftime_updir_writeprotect(ip_addr, REMOTE_ROOT_DIRECTORY, epoch_to_ftime(0, tzinfo))
 
-    # Upload helper script if not there.
-    try:
-        text = api.command_get_file_list(ip_addr, REMOTE_ROOT_DIRECTORY)
-    except exceptions.FlashAirDirNotFoundError:
-        pass
-    else:
-        if os.path.basename(LUA_HELPER_SCRIPT) in text:
-            return  # Script already there.
+    # Upload helper script.
     with open(LUA_HELPER_SCRIPT, mode='rb') as handle:
         api.upload_upload_file(ip_addr, os.path.basename(handle.name), handle)
 
