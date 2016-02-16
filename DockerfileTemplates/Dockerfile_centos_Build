@@ -12,3 +12,4 @@ ENV MODE_MAJOR="$MODE_MAJOR" NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION=
 RUN yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 RUN yum-builddep -y $NAME.spec
 RUN echo 'addFilter("E: dir-or-file-in-home")' >> /etc/rpmlint/config
+RUN echo 'addFilter("E: non-executable-script")' >> /etc/rpmlint/config
