@@ -8,6 +8,6 @@ ADD $NAME-$VERSION-*.rpm /build/
 ENV LANG=en_US.utf8 LC_ALL=en_US.utf8
 
 RUN yum install -y http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
-RUN yum install -y python3-httpretty python3-pytest $NAME-$VERSION-*.rpm
-RUN pip3 install pytest-catchlog pytest-httpretty
+RUN yum install -y python3-httpretty python3-pip python3-pytest $NAME-$VERSION-*.rpm
+RUN pip-python3 install pytest-catchlog pytest-httpretty
 RUN groupadd -r user && useradd -r -g user user
