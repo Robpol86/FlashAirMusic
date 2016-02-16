@@ -87,7 +87,11 @@ def setup_logging(config, name=None):
 
     # Handle console logging.
     if not config['--quiet'] and not handlers_out:
-        formatter = formatter_verbose if config['--verbose'] else formatter_minimal
+        if config['--verbose']:
+            formatter = formatter_verbose
+        else:
+            formatter = formatter_minimal
+            logging.getLogger('requests').setLevel(logging.WARNING)
         handler_stdout = logging.StreamHandler(sys.stdout)
         handler_stdout.setFormatter(formatter)
         handler_stdout.setLevel(logging.DEBUG)
