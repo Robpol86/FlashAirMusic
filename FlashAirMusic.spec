@@ -11,11 +11,11 @@ Requires(postun):   systemd
 Requires(pre):      shadow-utils
 Requires(preun):    systemd
 Requires:           ffmpeg
-Requires:           python3-docopt
-Requires:           python3-requests
 Source0:            %{name}-%{version}.tar.gz
-Source1:            https://pypi.python.org/packages/source/d/docoptcfg/docoptcfg-1.0.1.tar.gz
-Source2:            https://pypi.python.org/packages/source/m/mutagen/mutagen-1.31.tar.gz
+Source1:            https://pypi.python.org/packages/source/d/docopt/docopt-0.6.2.tar.gz
+Source2:            https://pypi.python.org/packages/source/r/requests/requests-2.9.1.tar.gz
+Source3:            https://pypi.python.org/packages/source/m/mutagen/mutagen-1.31.tar.gz
+Source4:            https://pypi.python.org/packages/source/d/docoptcfg/docoptcfg-1.0.1.tar.gz
 Summary:            %{getenv:SUMMARY}
 URL:                %{getenv:URL}
 Version:            %{getenv:VERSION}
@@ -36,8 +36,10 @@ Version:            %{getenv:VERSION}
 %autosetup -n %{name}-%{version}
 
 %build
-%{__tar} -C %{base_module}/_3rdparty --strip 1 -xzf %{SOURCE1} docoptcfg-*/docoptcfg.py
-%{__tar} -C %{base_module}/_3rdparty --strip 1 -xzf %{SOURCE2} mutagen-*/mutagen
+%{__tar} -C %{base_module}/_3rdparty --strip 1 -xzf %{SOURCE1} docopt-*/docopt.py
+%{__tar} -C %{base_module}/_3rdparty --strip 1 -xzf %{SOURCE2} requests-*/requests
+%{__tar} -C %{base_module}/_3rdparty --strip 1 -xzf %{SOURCE3} mutagen-*/mutagen
+%{__tar} -C %{base_module}/_3rdparty --strip 1 -xzf %{SOURCE4} docoptcfg-*/docoptcfg.py
 %{__python3} setup.py %{?py_setup_args} build --executable="%{__python3} %{py3_shbang_opts}"  # %py3_build
 
 %install
