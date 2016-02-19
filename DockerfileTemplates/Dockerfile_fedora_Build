@@ -10,4 +10,3 @@ WORKDIR /build
 ENV MODE_MAJOR="$MODE_MAJOR" NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
 
 RUN dnf builddep -y --spec $NAME.spec
-RUN echo 'addFilter("E: dir-or-file-in-home")' >> /etc/rpmlint/config

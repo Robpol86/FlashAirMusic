@@ -26,7 +26,7 @@ def test_scan(monkeypatch, exc):
         if exc:
             raise exc('Error')
         return TZINFO
-    monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG', {'--music-source': ''})
+    monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG', {'--working-dir': ''})
     monkeypatch.setattr(run, 'get_card_time_zone', func)
     monkeypatch.setattr(run, 'get_songs', lambda *_: ([1, 2, 3], None, None, None))
     monkeypatch.setattr(run, 'files_dirs_to_delete', lambda *_: {4, 5, 6})
@@ -61,7 +61,7 @@ def test_upload_cleanup_initialize_upload(monkeypatch, tmpdir, caplog, exc):
     monkeypatch.setattr(run, 'delete_files_dirs', lambda *_: None)
     monkeypatch.setattr(run, 'upload_files', lambda *_: None)
 
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('song.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('song.mp3'))
     songs = [Song(str(tmpdir.join('song.mp3')), str(tmpdir), '/MUSIC', dict(), TZINFO)]
     delete_paths = ['/MUSIC/empty']
 
@@ -141,8 +141,8 @@ def test_upload_cleanup_upload_files(monkeypatch, tmpdir, caplog, exc):
     monkeypatch.setattr(run, 'delete_files_dirs', lambda *_: None)
     monkeypatch.setattr(run, 'upload_files', func)
 
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('song.mp3'))
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('bigger.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('song.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('bigger.mp3'))
     tmpdir.join('bigger.mp3').write(b'\x00' * 1024, mode='ab')
     songs = [
         Song(str(tmpdir.join('song.mp3')), str(tmpdir), '/MUSIC', dict(), TZINFO),

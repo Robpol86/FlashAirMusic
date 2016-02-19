@@ -392,9 +392,9 @@ def test_upload_files(monkeypatch, shutdown):
         shutdown_future.set_result(True)
         expected = list()
     else:
-        expected = [(str(HERE.join('1khz_sine.mp3')), '/MUSIC/_fam_staged.bin 1454388430 /MUSIC/song.mp3')]
+        expected = [(str(HERE.join('1khz_sine_2.mp3')), '/MUSIC/_fam_staged.bin 1454388430 /MUSIC/song.mp3')]
 
-    files_attrs = [(str(HERE.join('1khz_sine.mp3')), '/MUSIC/song.mp3', 1454388430)]
+    files_attrs = [(str(HERE.join('1khz_sine_2.mp3')), '/MUSIC/song.mp3', 1454388430)]
     interface.upload_files('flashair', files_attrs, shutdown_future)
 
     actual = list(zip(upload, execute))

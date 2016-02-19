@@ -24,8 +24,8 @@ def scan(ip_addr, shutdown_future):
     :rtype: tuple
     """
     log = logging.getLogger(__name__)
-    log.debug('Scanning for local and remote songs...')
-    source_dir = GLOBAL_MUTABLE_CONFIG['--music-source']
+    source_dir = GLOBAL_MUTABLE_CONFIG['--working-dir']
+    log.debug('Scanning for local and remote songs in %s', source_dir)
 
     # First get timezone.
     try:

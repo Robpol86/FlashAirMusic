@@ -55,22 +55,20 @@ docker-internal-lint:
 	test $$($(NAME) --version) == "$(VERSION)"
 
 docker-internal-run: PATH_LOG := /var/log/$(NAME)/$(NAME).log
-docker-internal-run: PATH_SONG1 := /home/$(NAME)/fam_working_dir/song1.mp3
-docker-internal-run: PATH_SONG2 := /home/$(NAME)/fam_working_dir/song2.mp3
+docker-internal-run: PATH_SONG1 := /var/spool/$(NAME)/1khz_sine_1.mp3
+docker-internal-run: PATH_SONG2 := /var/spool/$(NAME)/1khz_sine_2.mp3
 docker-internal-run:
 	! test -f $(PATH_SONG1)
 	! test -f $(PATH_SONG2)
 	! test -f $(PATH_LOG)
 
-	mkdir /home/$(NAME)/fam_music_source
 	systemctl start $(NAME).service
-	systemctl status -l $(NAME).service
 	for i in {1..5}; do test -f $(PATH_LOG) && break; sleep 1; done
+	systemctl status -l $(NAME).service
 	grep "Running main loop." $(PATH_LOG)
 
-	cp tests/1khz_sine.flac /home/$(NAME)/fam_music_source/song1.flac
-	cp tests/1khz_sine.mp3 /home/$(NAME)/fam_music_source/song2.mp3
 	for i in {1..400}; do grep "Done converting" $(PATH_LOG) && break; sleep 1; done
+	cat $(PATH_LOG)
 	grep "Done converting 2 file(s) (0 failed)." $(PATH_LOG)
 	ffprobe $(PATH_SONG1)
 	ffprobe $(PATH_SONG2)

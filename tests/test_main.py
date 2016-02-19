@@ -155,9 +155,9 @@ def test_songs(tmpdir):
     """).format(tmpdir.ensure_dir('source'), tmpdir.ensure_dir('working')))
     command = [find_executable('FlashAirMusic'), 'run', '--config', str(config_file)]
 
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song1.mp3'))
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song2.mp3'))
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song3.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('source', 'song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('source', 'song2.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('source', 'song3.mp3'))
 
     # Run.
     stdout_file = tmpdir.join('stdout.log')
@@ -209,9 +209,9 @@ def test_interrupt_ffmpeg(monkeypatch, tmpdir, signum):
     """).format(tmpdir.ensure_dir('source'), tmpdir.ensure_dir('working')))
     command = [find_executable('FlashAirMusic'), 'run', '--config', str(config_file)]
 
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song1.mp3'))
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song2.mp3'))
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song3.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('source', 'song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('source', 'song2.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('source', 'song3.mp3'))
 
     ffmpeg = tmpdir.ensure('bin', 'ffmpeg')
     ffmpeg.write(dedent("""\
@@ -274,9 +274,9 @@ def test_bug_hangs(monkeypatch, tmpdir):
     working-dir = {}
     """).format(tmpdir.ensure_dir('source'), tmpdir.ensure_dir('working')))
 
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song1.mp3'))
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song2.mp3'))
-    HERE.join('1khz_sine.mp3').copy(tmpdir.join('source', 'song3.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('source', 'song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('source', 'song2.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir.join('source', 'song3.mp3'))
 
     ffmpeg = tmpdir.ensure('bin', 'ffmpeg')
     ffmpeg.write(dedent("""\

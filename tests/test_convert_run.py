@@ -54,7 +54,7 @@ def test_scan_wait(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG',
                         {'--music-source': source_file.dirname, '--working-dir': str(tmpdir.ensure_dir('working'))})
     if mode != 'none':
-        HERE.join('1khz_sine.mp3').copy(source_file)
+        HERE.join('1khz_sine_2.mp3').copy(source_file)
 
     # Run.
     loop = asyncio.get_event_loop()
@@ -109,7 +109,7 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
     target_dir.ensure('empty', 'song2.mp3')
 
     if mode == 'normal':
-        HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
+        HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
     else:
         target_dir.ensure_dir('empty').chmod(0o0544)
 
@@ -165,7 +165,7 @@ def test_run(monkeypatch, tmpdir, mode):
         assert not tmpdir.join('song.mp3').check()
         return
 
-    HERE.join('1khz_sine.mp3').copy(source_file)
+    HERE.join('1khz_sine_2.mp3').copy(source_file)
     assert not tmpdir.join('song.mp3').check()
     loop.run_until_complete(run.run(loop, semaphore, asyncio.Future()))
     assert not semaphore.locked()

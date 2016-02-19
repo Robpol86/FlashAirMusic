@@ -17,7 +17,7 @@ def test_song(tmpdir, mode):
     :param str mode: Scenario to test for.
     """
     source = tmpdir.ensure('source', 'song.mp3')
-    HERE.join('1khz_sine.mp3').copy(source)
+    HERE.join('1khz_sine_2.mp3').copy(source)
 
     # Write metadata.
     remote_metadata = dict()
@@ -49,7 +49,7 @@ def test_song_path(tmpdir):
     :param tmpdir: pytest fixture.
     """
     source_file = tmpdir.ensure('source', 'šöñgæ.mp3')
-    HERE.join('1khz_sine.mp3').copy(source_file)
+    HERE.join('1khz_sine_2.mp3').copy(source_file)
 
     # Generate long path.
     target_dir = '/'.join(['', 'MUSIC', 'a' * 100, 'b' * 120, 'c' * 140, 'd'])
@@ -101,8 +101,8 @@ def test_get_songs(monkeypatch, tmpdir):
     # Test working.
     existing = source_dir.join('existing.mp3')
     new = source_dir.join('new.mp3')
-    HERE.join('1khz_sine.mp3').copy(existing)
-    HERE.join('1khz_sine.mp3').copy(new)
+    HERE.join('1khz_sine_2.mp3').copy(existing)
+    HERE.join('1khz_sine_2.mp3').copy(new)
     remote_empty_dirs.append('/MUSIC/empty_dir')
     remote_files['/MUSIC/existing.mp3'] = (existing.stat().size, existing.stat().mtime)
     remote_files['/MUSIC/delete.mp3'] = (existing.stat().size, existing.stat().mtime)
@@ -178,11 +178,11 @@ def test_get_songs_subdirectories(monkeypatch, tmpdir):
     source_dir_d = source_dir.ensure_dir('b', 'c', 'd')
 
     # Copy files.
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir_a.join('song2.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir_b.join('song3.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir_c.join('song4.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir_d.join('song5.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir_a.join('song2.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir_b.join('song3.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir_c.join('song4.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir_d.join('song5.mp3'))
 
     # Test those files.
     songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, asyncio.Future())

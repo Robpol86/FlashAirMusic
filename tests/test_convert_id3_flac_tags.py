@@ -27,7 +27,7 @@ def test_read_stored_metadata(tmpdir, caplog, mode):
     elif mode == 'corrupted':
         path.write('\x00\x00\x00\x00')
     elif mode != 'dne':
-        HERE.join('1khz_sine.mp3').copy(path)
+        HERE.join('1khz_sine_2.mp3').copy(path)
 
     # Write ID3 tag.
     text, expected = '', dict()
@@ -78,8 +78,8 @@ def test_write_stored_metadata(tmpdir, caplog):
     assert messages[-1].startswith('Corrupted mp3 file')
 
     # Run.
-    HERE.join('1khz_sine.mp3').copy(source_file)
-    HERE.join('1khz_sine.mp3').copy(target_file)
+    HERE.join('1khz_sine_2.mp3').copy(source_file)
+    HERE.join('1khz_sine_2.mp3').copy(target_file)
     assert song.needs_action is True
     id3_flac_tags.write_stored_metadata(song)
 

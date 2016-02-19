@@ -26,7 +26,7 @@ def test_convert_file_success(monkeypatch, tmpdir, caplog):
     monkeypatch.setattr(transcode, 'SLEEP_FOR', 0.1)
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
     song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
     assert song.needs_action is True
 
@@ -68,9 +68,9 @@ def test_convert_file_failure(monkeypatch, tmpdir, caplog, delete):
     monkeypatch.setattr(transcode, 'SLEEP_FOR', 0.1)
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
     if delete:
-        HERE.join('1khz_sine.mp3').copy(target_dir.join('song1.mp3'))
+        HERE.join('1khz_sine_2.mp3').copy(target_dir.join('song1.mp3'))
     song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
     assert song.needs_action is True
 
@@ -116,7 +116,7 @@ def test_convert_file_deadlock(monkeypatch, tmpdir, caplog):
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg)})
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
     song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
 
     # Run.
@@ -172,7 +172,7 @@ def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
     monkeypatch.setenv('EXIT_SIGNAL', exit_signal)
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
     song = Song(str(source_dir.join('song1.mp3')), str(source_dir), str(target_dir))
 
     # Run.
@@ -218,8 +218,8 @@ def test_convert_songs_errors(monkeypatch, tmpdir, caplog, mode):
     monkeypatch.setenv('ERROR_ON', 'song1.mp3' if mode == 'failure' else '')
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song2.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song2.mp3'))
     songs = get_songs(str(source_dir), str(target_dir))[0]
 
     # Run.
@@ -259,7 +259,7 @@ def test_convert_songs_single(monkeypatch, tmpdir, caplog):
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': FFMPEG_DEFAULT_BINARY, '--threads': '2'})
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
     songs = get_songs(str(source_dir), str(target_dir))[0]
 
     # Run.
@@ -293,10 +293,10 @@ def test_convert_songs_semaphore(monkeypatch, tmpdir, caplog):
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', {'--ffmpeg-bin': str(ffmpeg), '--threads': '2'})
     source_dir = tmpdir.ensure_dir('source')
     target_dir = tmpdir.ensure_dir('target')
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song2.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song3.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song4.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song2.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song3.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song4.mp3'))
     songs = get_songs(str(source_dir), str(target_dir))[0]
 
     # Run.

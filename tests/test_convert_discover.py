@@ -20,7 +20,7 @@ def test_song(tmpdir, mode):
     """
     source_file = tmpdir.ensure('source', 'song.mp3')
     target_file = tmpdir.ensure('target', 'song.mp3')
-    HERE.join('1khz_sine.mp3').copy(source_file)
+    HERE.join('1khz_sine_2.mp3').copy(source_file)
 
     # Write metadata.
     if mode != 'no target':
@@ -76,9 +76,9 @@ def test_get_songs(tmpdir):
     assert not valid_targets
 
     # Create mp3 that needs conversion and FLAC that doesn't.
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
-    HERE.join('1khz_sine.flac').copy(source_dir.join('song2.flac'))
-    HERE.join('1khz_sine.mp3').copy(target_dir.join('song2.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine_1.flac').copy(source_dir.join('song2.flac'))
+    HERE.join('1khz_sine_2.mp3').copy(target_dir.join('song2.mp3'))
     ID3(str(target_dir.join('song2.mp3'))).save(padding=lambda _: 200)
     metadata = dict(
         source_mtime=int(source_dir.join('song2.flac').stat().mtime),
@@ -115,11 +115,11 @@ def test_get_songs_subdirectories(tmpdir):
     target_dir = tmpdir.ensure_dir('target')
 
     # Copy files.
-    HERE.join('1khz_sine.mp3').copy(source_dir.join('song1.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir_a.join('song2.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir_b.join('song3.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir_c.join('song4.mp3'))
-    HERE.join('1khz_sine.mp3').copy(source_dir_d.join('song5.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir.join('song1.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir_a.join('song2.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir_b.join('song3.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir_c.join('song4.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(source_dir_d.join('song5.mp3'))
 
     # Test those files.
     songs, valid_targets = discover.get_songs(str(source_dir), str(target_dir))

@@ -32,7 +32,7 @@ def initialize(monkeypatch, tmpdir_module):
     monkeypatch.setenv('HOME', tmpdir_module)
     if not tmpdir_module.join('fam_working_dir').check():
         tmpdir_module.ensure_dir('fam_working_dir')
-        HERE.join('1khz_sine.mp3').copy(tmpdir_module.ensure('fam_music_source', 'song1.mp3'))
+        HERE.join('1khz_sine_2.mp3').copy(tmpdir_module.ensure('fam_music_source', 'song1.mp3'))
         initialize_config(doc)
 
 
@@ -124,7 +124,7 @@ def test_delete_and_spaces(tmpdir_module, caplog):
     """
     tmpdir_module.remove(rec=True)
     tmpdir_module.ensure_dir()
-    HERE.join('1khz_sine.mp3').copy(tmpdir_module.ensure('fam_music_source', 'Cool Artist', 'Cool Artist - 1994.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir_module.ensure('fam_music_source', 'Cool Artist', 'Cool Artist - 1994.mp3'))
 
     # Run multiple times for directory removal.
     for i in range(5, -1, -1):

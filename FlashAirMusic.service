@@ -18,6 +18,7 @@ Nice=10
 NoNewPrivileges=true
 PrivateDevices=true
 PrivateTmp=true
+ProtectHome=read-only
 ProtectSystem=full
 StandardError=syslog
 StandardOutput=syslog

@@ -42,11 +42,10 @@ Version:            %{getenv:VERSION}
 %install
 %py3_install
 %{__install} -d -m 0755 %{buildroot}%{_localstatedir}/log/%{name}
+%{__install} -d -m 0755 %{buildroot}%{_localstatedir}/spool/%{name}
 %{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/%{name}
 %{__install} -d -m 0755 %{buildroot}%{_sysconfdir}/logrotate.d
 %{__install} -d -m 0755 %{buildroot}%{_unitdir}
-%{__install} -d -m 0755 %{buildroot}/home/%{name}
-%{__install} -d -m 0755 %{buildroot}/home/%{name}/fam_working_dir
 %{__install} -m 0644 %{name}.ini %{buildroot}%{_sysconfdir}/%{name}/
 %{__install} -m 0644 %{name}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 %{__install} -m 0644 %{name}.service %{buildroot}%{_unitdir}/
@@ -70,8 +69,7 @@ exit 0
 %config(noreplace) %attr(-, root, %{daemon_group}) %{_sysconfdir}/%{name}/%{name}.ini
 %config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
 %dir %attr(-, %{daemon_user}, %{daemon_group}) %{_localstatedir}/log/%{name}
-%dir %attr(-, %{daemon_user}, %{daemon_group}) /home/%{name}
-%dir %attr(-, %{daemon_user}, %{daemon_group}) /home/%{name}/fam_working_dir
+%dir %attr(-, %{daemon_user}, %{daemon_group}) %{_localstatedir}/spool/%{name}
 %doc README.rst
 %license LICENSE
 %{_bindir}/%{name}

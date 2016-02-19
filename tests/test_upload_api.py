@@ -193,7 +193,7 @@ def test_upload_upload_file(bad):
     httpretty.register_uri(httpretty.POST, 'http://flashair/upload.cgi', body='', status=400 if bad else 200)
 
     if not bad:
-        return api.upload_upload_file('flashair', 'file.mp3', HERE.join('1khz_sine.mp3').open(mode='rb'))
+        return api.upload_upload_file('flashair', 'file.mp3', HERE.join('1khz_sine_2.mp3').open(mode='rb'))
 
     with pytest.raises(exceptions.FlashAirHTTPError):
-        api.upload_upload_file('flashair', 'file.mp3', HERE.join('1khz_sine.mp3').open(mode='rb'))
+        api.upload_upload_file('flashair', 'file.mp3', HERE.join('1khz_sine_2.mp3').open(mode='rb'))
