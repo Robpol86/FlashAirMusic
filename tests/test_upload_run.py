@@ -187,7 +187,7 @@ def test_run_quick(monkeypatch, caplog, mode):
 
     # Run.
     loop = asyncio.get_event_loop()
-    success = loop.run_until_complete(run.run(asyncio.Semaphore(), '', shutdown_future))
+    success = loop.run_until_complete(run.run('', shutdown_future))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     if mode == 'shutdown':
@@ -240,7 +240,7 @@ def test_run_slow(monkeypatch, caplog, mode):
 
     # Run.
     loop = asyncio.get_event_loop()
-    success = loop.run_until_complete(run.run(asyncio.Semaphore(), '', asyncio.Future()))
+    success = loop.run_until_complete(run.run('', asyncio.Future()))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     if mode == 'timeout':

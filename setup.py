@@ -41,6 +41,6 @@ setup(
     name='FlashAirMusic',
     packages=find_packages(exclude=['tests']),
     url='https://github.com/Robpol86/FlashAirMusic',
-    version='0.0.1',
+    version='0.0.2',
     zip_safe=True,
 )

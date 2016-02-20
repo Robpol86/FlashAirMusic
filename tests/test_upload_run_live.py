@@ -60,7 +60,7 @@ def test_run_upload_one(tmpdir_module, caplog):
     """
     # Run.
     loop = asyncio.get_event_loop()
-    success = loop.run_until_complete(run.run(asyncio.Semaphore(), IP_ADDR, asyncio.Future()))
+    success = loop.run_until_complete(run.run(IP_ADDR, asyncio.Future()))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
     errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelno > logging.INFO]
 
@@ -92,7 +92,7 @@ def test_run_upload_subdir(tmpdir_module, caplog):
 
     # Run.
     loop = asyncio.get_event_loop()
-    success = loop.run_until_complete(run.run(asyncio.Semaphore(), IP_ADDR, asyncio.Future()))
+    success = loop.run_until_complete(run.run(IP_ADDR, asyncio.Future()))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
     errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelno > logging.INFO]
 
@@ -130,7 +130,7 @@ def test_delete_and_spaces(tmpdir_module, caplog):
     for i in range(5, -1, -1):
         # Run.
         loop = asyncio.get_event_loop()
-        success = loop.run_until_complete(run.run(asyncio.Semaphore(), IP_ADDR, asyncio.Future()))
+        success = loop.run_until_complete(run.run(IP_ADDR, asyncio.Future()))
         messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
         errors = [r.message for r in caplog.records if r.name.startswith('flash_air_mus') and r.levelno > logging.INFO]
 

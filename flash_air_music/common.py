@@ -1,6 +1,9 @@
 """Holds common objects used throughout the project."""
 
+import asyncio
 import os
+
+SEMAPHORE = asyncio.Semaphore()  # Main semaphore shared by convert and upload coroutines/functions.
 
 
 class BaseSong(object):

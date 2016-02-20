@@ -4,6 +4,7 @@ import asyncio
 import logging
 import time
 
+from flash_air_music.common import SEMAPHORE
 from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
 from flash_air_music.exceptions import FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
 from flash_air_music.upload.discover import files_dirs_to_delete, get_songs
@@ -76,10 +77,9 @@ def upload_cleanup(ip_addr, songs, delete_paths, tzinfo, shutdown_future):
 
 
 @asyncio.coroutine
-def run(semaphore, ip_addr, shutdown_future):
+def run(ip_addr, shutdown_future):
     """Wait for semaphore and then try to run scan() and upload_cleanup() within GIVE_UP_AFTER. Retry on network error.
 
-    :param asyncio.Semaphore semaphore: Semaphore() instance.
     :param str ip_addr: IP address of FlashAir to connect to.
     :param asyncio.Future shutdown_future: Shutdown signal.
 
@@ -91,7 +91,7 @@ def run(semaphore, ip_addr, shutdown_future):
     sleep_for = 2
     success = False
     changed = False
-    with (yield from semaphore):
+    with (yield from SEMAPHORE):
         log.debug('Got semaphore lock.')
         start_time = time.time()
         while time.time() - start_time < GIVE_UP_AFTER:

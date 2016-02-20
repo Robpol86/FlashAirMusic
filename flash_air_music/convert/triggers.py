@@ -5,6 +5,7 @@ import hashlib
 import logging
 import os
 
+from flash_air_music.common import SEMAPHORE
 from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
 from flash_air_music.convert.discover import walk_source
 from flash_air_music.convert.run import run
@@ -14,19 +15,18 @@ EVERY_SECONDS_WATCH = 5 * 60
 
 
 @asyncio.coroutine
-def periodically_convert(loop, semaphore, shutdown_future):
+def periodically_convert(loop, shutdown_future):
     """Call run() every EVERY_SECONDS_PERIODIC unless semaphore is locked.
 
     :param loop: AsyncIO event loop object.
-    :param asyncio.Semaphore semaphore: Semaphore() instance.
     :param asyncio.Future shutdown_future: Main process shutdown signal.
     """
     log = logging.getLogger(__name__)
     while True:
-        if semaphore.locked():
+        if SEMAPHORE.locked():
             log.debug('Semaphore is locked, skipping this iteration.')
         else:
-            yield from run(loop, semaphore, shutdown_future)
+            yield from run(loop, shutdown_future)
         log.debug('periodically_convert() sleeping %d seconds.', EVERY_SECONDS_PERIODIC)
         for _ in range(EVERY_SECONDS_PERIODIC):
             yield from asyncio.sleep(1)
@@ -37,13 +37,12 @@ def periodically_convert(loop, semaphore, shutdown_future):
 
 
 @asyncio.coroutine
-def watch_directory(loop, semaphore, shutdown_future):
+def watch_directory(loop, shutdown_future):
     """Watch directory by recursing into it every EVERY_SECONDS_WATCH.
 
     Compare size and mtimes between periods. Is responsible for converting on startup.
 
     :param loop: AsyncIO event loop object.
-    :param asyncio.Semaphore semaphore: Semaphore() instance.
     :param asyncio.Future shutdown_future: Main process shutdown signal.
     """
     log = logging.getLogger(__name__)
@@ -59,7 +58,7 @@ def watch_directory(loop, semaphore, shutdown_future):
         array.clear()
         if current_hash != previous_hash:
             log.debug('watch_directory() file system changed, calling run().')
-            yield from run(loop, semaphore, shutdown_future)
+            yield from run(loop, shutdown_future)
             previous_hash = current_hash
         else:
             log.debug('watch_directory() no change in file system, not calling run().')

@@ -154,20 +154,21 @@ def test_run(monkeypatch, tmpdir, mode):
         '--threads': '2',
         '--working-dir': str(tmpdir),
     }
-    monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG', config)
-    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', config)
     loop = asyncio.get_event_loop()
     semaphore = asyncio.Semaphore()
+    monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG', config)
+    monkeypatch.setattr(run, 'SEMAPHORE', semaphore)
+    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', config)
 
     if mode == 'nothing':
-        loop.run_until_complete(run.run(loop, semaphore, asyncio.Future()))
+        loop.run_until_complete(run.run(loop, asyncio.Future()))
         assert not semaphore.locked()
         assert not tmpdir.join('song.mp3').check()
         return
 
     HERE.join('1khz_sine_2.mp3').copy(source_file)
     assert not tmpdir.join('song.mp3').check()
-    loop.run_until_complete(run.run(loop, semaphore, asyncio.Future()))
+    loop.run_until_complete(run.run(loop, asyncio.Future()))
     assert not semaphore.locked()
     assert tmpdir.join('song.mp3').check(file=True)
 
@@ -203,15 +204,16 @@ def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
         '--threads': '2',
         '--working-dir': str(tmpdir),
     }
-    monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG', config)
-    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', config)
     loop = asyncio.get_event_loop()
     semaphore = asyncio.Semaphore()
     shutdown_future = asyncio.Future()
+    monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG', config)
+    monkeypatch.setattr(run, 'SEMAPHORE', semaphore)
+    monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', config)
 
     loop.run_until_complete(asyncio.wait([
         shutdown_after_start(loop, shutdown_future, caplog, signum),
-        run.run(loop, semaphore, shutdown_future),
+        run.run(loop, shutdown_future),
     ], timeout=30))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 

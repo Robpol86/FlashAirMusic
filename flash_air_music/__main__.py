@@ -40,7 +40,6 @@ def main():
     """Main function."""
     log = logging.getLogger(__name__)
     loop = asyncio.get_event_loop()
-    semaphore = asyncio.Semaphore()
     shutdown_future = asyncio.Future()
 
     log.info('Scheduling signal handlers.')
@@ -49,9 +48,9 @@ def main():
     loop.add_signal_handler(signal.SIGTERM, loop.create_task, shutdown(loop, signal.SIGTERM, shutdown_future, True))
 
     log.info('Scheduling periodic tasks.')
-    loop.call_later(EVERY_SECONDS_PERIODIC, loop.create_task, periodically_convert(loop, semaphore, shutdown_future))
-    loop.create_task(watch_directory(loop, semaphore, shutdown_future))
-    loop.create_task(watch_for_flashair(semaphore, shutdown_future))
+    loop.call_later(EVERY_SECONDS_PERIODIC, loop.create_task, periodically_convert(loop, shutdown_future))
+    loop.create_task(watch_directory(loop, shutdown_future))
+    loop.create_task(watch_for_flashair(shutdown_future))
 
     log.info('Running main loop.')
     loop.run_forever()

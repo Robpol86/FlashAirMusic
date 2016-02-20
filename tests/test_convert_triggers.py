@@ -89,16 +89,17 @@ def test_periodically_convert(monkeypatch, tmpdir, caplog, mode):
         '--threads': '2',
         '--working-dir': str(tmpdir),
     }
-    monkeypatch.setattr('flash_air_music.convert.triggers.EVERY_SECONDS_PERIODIC', 1)
-    monkeypatch.setattr('flash_air_music.convert.run.GLOBAL_MUTABLE_CONFIG', config)
-    monkeypatch.setattr('flash_air_music.convert.transcode.GLOBAL_MUTABLE_CONFIG', config)
     loop = asyncio.get_event_loop()
     semaphore = asyncio.Semaphore(0 if mode == 'locked' else 1)
     shutdown_future = asyncio.Future()
+    monkeypatch.setattr('flash_air_music.convert.run.GLOBAL_MUTABLE_CONFIG', config)
+    monkeypatch.setattr('flash_air_music.convert.transcode.GLOBAL_MUTABLE_CONFIG', config)
+    monkeypatch.setattr('flash_air_music.convert.triggers.EVERY_SECONDS_PERIODIC', 1)
+    monkeypatch.setattr('flash_air_music.convert.triggers.SEMAPHORE', semaphore)
 
     loop.run_until_complete(asyncio.wait([
         shutdown_after_string(loop, shutdown_future, caplog, 'periodically_convert() waking up.'),
-        periodically_convert(loop, semaphore, shutdown_future),
+        periodically_convert(loop, shutdown_future),
     ], timeout=30))
 
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
@@ -126,12 +127,11 @@ def test_watch_directory(monkeypatch, tmpdir, caplog):
     monkeypatch.setattr('flash_air_music.convert.triggers.GLOBAL_MUTABLE_CONFIG', {'--music-source': str(tmpdir)})
     monkeypatch.setattr('flash_air_music.convert.run.scan_wait', asyncio.coroutine(lambda: (None, None, None)))
     loop = asyncio.get_event_loop()
-    semaphore = asyncio.Semaphore()
     shutdown_future = asyncio.Future()
 
     nested_results = loop.run_until_complete(asyncio.wait([
         alter_file_system(loop, shutdown_future, caplog, tmpdir),
-        watch_directory(loop, semaphore, shutdown_future),
+        watch_directory(loop, shutdown_future),
     ], timeout=30))
 
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]

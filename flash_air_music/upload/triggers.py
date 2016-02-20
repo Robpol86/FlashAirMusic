@@ -12,10 +12,9 @@ SUCCESS_SLEEP = 5 * 60
 
 
 @asyncio.coroutine
-def watch_for_flashair(semaphore, shutdown_future):
+def watch_for_flashair(shutdown_future):
     """Try to connect to FlashAir card every EVERY_SECONDS_CHECK. Runs coroutine if card responds.
 
-    :param asyncio.Semaphore semaphore: Semaphore() instance.
     :param asyncio.Future shutdown_future: Main process shutdown signal.
     """
     log = logging.getLogger(__name__)
@@ -32,7 +31,7 @@ def watch_for_flashair(semaphore, shutdown_future):
                 success = False
             else:
                 log.debug('%s is reachable. calling run().', GLOBAL_MUTABLE_CONFIG['--ip-addr'])
-                success = yield from run(semaphore, GLOBAL_MUTABLE_CONFIG['--ip-addr'], shutdown_future)
+                success = yield from run(GLOBAL_MUTABLE_CONFIG['--ip-addr'], shutdown_future)
         else:
             log.debug('No IP address specified. Skipping watch_for_flashair().')
             success = True

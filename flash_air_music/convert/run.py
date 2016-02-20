@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 
+from flash_air_music.common import SEMAPHORE
 from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
 from flash_air_music.convert.discover import files_dirs_to_delete, get_songs
 from flash_air_music.convert.transcode import convert_songs
@@ -74,16 +75,15 @@ def convert_cleanup(loop, shutdown_future, songs, delete_files, remove_dirs):
 
 
 @asyncio.coroutine
-def run(loop, semaphore, shutdown_future):
+def run(loop, shutdown_future):
     """Wait for semaphore before running scan_convert_cleanup().
 
     :param loop: AsyncIO event loop object.
-    :param asyncio.Semaphore semaphore: Semaphore() instance.
     :param asyncio.Future shutdown_future: Shutdown signal.
     """
     log = logging.getLogger(__name__)
     log.debug('Waiting for semaphore...')
-    with (yield from semaphore):
+    with (yield from SEMAPHORE):
         log.debug('Got semaphore lock.')
         songs, delete_files, remove_dirs = yield from scan_wait()
         if any([songs, delete_files, remove_dirs]):
