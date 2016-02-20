@@ -62,6 +62,8 @@ docker-internal-run:
 	! test -f $(PATH_SONG2)
 	! test -f $(PATH_LOG)
 
+	setfacl -m g:FlashAirMusic:--x /home/user
+	setfacl -R -m g:FlashAirMusic:r-x /home/user/Music
 	systemctl start $(NAME).service
 	for i in {1..5}; do test -f $(PATH_LOG) && break; sleep 1; done
 	systemctl status -l $(NAME).service

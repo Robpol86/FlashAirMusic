@@ -4,14 +4,16 @@
 FROM $MODE
 
 VOLUME /build
-ADD $NAME-$VERSION-*.rpm /build/
+ADD $NAME-$VERSION-*.rpm tests/1khz_sine* /build/
 WORKDIR /build
 
 ENV MODE_MAJOR="$MODE_MAJOR" NAME="$NAME" SUMMARY="$SUMMARY" URL="$URL" VERSION="$VERSION"
 
 RUN dnf install -y http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-23.noarch.rpm
 RUN dnf install -y make procps $NAME-$VERSION-*.rpm
+RUN groupadd -r user && useradd -g user user
+RUN su - user -c "mkdir ~/Music && cp /build/1khz_sine* ~/Music"
 RUN echo verbose = true >> /etc/FlashAirMusic/FlashAirMusic.ini
-RUN echo music-source = /build/tests >> /etc/FlashAirMusic/FlashAirMusic.ini
+RUN echo music-source = /home/user/Music >> /etc/FlashAirMusic/FlashAirMusic.ini
 
 CMD /lib/systemd/systemd
