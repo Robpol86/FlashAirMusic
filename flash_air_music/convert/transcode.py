@@ -125,11 +125,11 @@ def convert_file(loop, shutdown_future, song):
 
 
 @asyncio.coroutine
-def bottleneck(loop, semaphore, shutdown_future, song):
-    """Wait for semaphore before running convert_file().
+def bottleneck(loop, conversion_semaphore, shutdown_future, song):
+    """Wait for conversion_semaphore before running convert_file().
 
     :param loop: AsyncIO event loop object.
-    :param asyncio.Semaphore semaphore: Semaphore() instance.
+    :param asyncio.Semaphore conversion_semaphore: Semaphore() instance.
     :param asyncio.Future shutdown_future: Shutdown signal.
     :param flash_air_music.convert.discover.Song song: Song instance.
 
@@ -137,10 +137,10 @@ def bottleneck(loop, semaphore, shutdown_future, song):
     :rtype: tuple
     """
     log = logging.getLogger(__name__)
-    log.debug('%s: waiting for semaphore...', song.name)
+    log.debug('%s: waiting for conversion_semaphore...', song.name)
     try:
-        with (yield from semaphore):
-            log.debug('%s: got semaphore lock.', song.name)
+        with (yield from conversion_semaphore):
+            log.debug('%s: got conversion_semaphore lock.', song.name)
             return (yield from convert_file(loop, shutdown_future, song))
     finally:
         log.debug('%s: released lock.', song.name)

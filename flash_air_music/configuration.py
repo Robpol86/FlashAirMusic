@@ -14,10 +14,10 @@ from flash_air_music.setup_logging import setup_logging
 
 FFMPEG_DEFAULT_BINARY = find_executable('ffmpeg')
 FFMPEG_NOT_FOUND_LABEL = '<not found>'
-SIGNALS_INT_TO_NAME = {v: {a for a, b in vars(signal).items() if a.startswith('SIG') and b == v}
-                       for k, v in vars(signal).items() if k.startswith('SIG')}
 GLOBAL_MUTABLE_CONFIG = dict()
 REGEX_IP_ADDR = re.compile(r'^[a-zA-Z0-9_.-]+$')
+SIGNALS_INT_TO_NAME = {v: {a for a, b in vars(signal).items() if a.startswith('SIG') and b == v}
+                       for k, v in vars(signal).items() if k.startswith('SIG')}
 
 
 def _get_arguments(doc):

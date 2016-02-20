@@ -1,4 +1,4 @@
-"""Holds base class for Song subclasses."""
+"""Holds common objects used throughout the project."""
 
 import os
 

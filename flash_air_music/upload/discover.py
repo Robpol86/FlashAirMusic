@@ -4,7 +4,7 @@ import logging
 import os
 import unicodedata
 
-from flash_air_music.base_song import BaseSong
+from flash_air_music.common import BaseSong
 from flash_air_music.exceptions import FlashAirDirNotFoundError, FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
 from flash_air_music.upload.interface import DO_NOT_DELETE, epoch_to_ftime, get_files, REMOTE_ROOT_DIRECTORY
 

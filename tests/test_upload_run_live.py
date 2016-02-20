@@ -31,8 +31,8 @@ def initialize(monkeypatch, tmpdir_module):
     monkeypatch.setattr('sys.argv', ['FlashAirMusic', 'run'])
     monkeypatch.setenv('HOME', tmpdir_module)
     if not tmpdir_module.join('fam_working_dir').check():
-        tmpdir_module.ensure_dir('fam_working_dir')
-        HERE.join('1khz_sine_2.mp3').copy(tmpdir_module.ensure('fam_music_source', 'song1.mp3'))
+        tmpdir_module.ensure_dir('fam_music_source')
+        HERE.join('1khz_sine_2.mp3').copy(tmpdir_module.ensure('fam_working_dir', 'song1.mp3'))
         initialize_config(doc)
 
 
@@ -67,7 +67,7 @@ def test_run_upload_one(tmpdir_module, caplog):
     # Check logs.
     assert not errors
     actual = [m for m in messages if m.startswith('Uploading file: ')]
-    expected = ['Uploading file: {}'.format(tmpdir_module.join('fam_music_source', 'song1.mp3'))]
+    expected = ['Uploading file: {}'.format(tmpdir_module.join('fam_working_dir', 'song1.mp3'))]
     assert actual == expected
     actual = [m for m in messages if m.startswith('Deleting: ')]
     assert not actual
@@ -86,9 +86,9 @@ def test_run_upload_subdir(tmpdir_module, caplog):
     :param caplog: pytest extension fixture.
     :param tmpdir_module: conftest fixture.
     """
-    tmpdir_module.ensure('fam_music_source', 'song2.mp3').write('a' * 100)
-    tmpdir_module.ensure('fam_music_source', 'subdir1', 'song3.mp3').write('a' * 50)
-    tmpdir_module.ensure('fam_music_source', 'subdir2', 'a', 'b', 'c', 'song4.mp3').write('a' * 10)
+    tmpdir_module.ensure('fam_working_dir', 'song2.mp3').write('a' * 100)
+    tmpdir_module.ensure('fam_working_dir', 'subdir1', 'song3.mp3').write('a' * 50)
+    tmpdir_module.ensure('fam_working_dir', 'subdir2', 'a', 'b', 'c', 'song4.mp3').write('a' * 10)
 
     # Run.
     loop = asyncio.get_event_loop()
@@ -100,9 +100,9 @@ def test_run_upload_subdir(tmpdir_module, caplog):
     assert not errors
     actual = [m for m in messages if m.startswith('Uploading file: ')]
     expected = [
-        'Uploading file: {}'.format(tmpdir_module.join('fam_music_source', 'subdir2', 'a', 'b', 'c', 'song4.mp3')),
-        'Uploading file: {}'.format(tmpdir_module.join('fam_music_source', 'subdir1', 'song3.mp3')),
-        'Uploading file: {}'.format(tmpdir_module.join('fam_music_source', 'song2.mp3')),
+        'Uploading file: {}'.format(tmpdir_module.join('fam_working_dir', 'subdir2', 'a', 'b', 'c', 'song4.mp3')),
+        'Uploading file: {}'.format(tmpdir_module.join('fam_working_dir', 'subdir1', 'song3.mp3')),
+        'Uploading file: {}'.format(tmpdir_module.join('fam_working_dir', 'song2.mp3')),
     ]
     assert actual == expected
     actual = [m for m in messages if m.startswith('Deleting: ')]
@@ -124,7 +124,7 @@ def test_delete_and_spaces(tmpdir_module, caplog):
     """
     tmpdir_module.remove(rec=True)
     tmpdir_module.ensure_dir()
-    HERE.join('1khz_sine_2.mp3').copy(tmpdir_module.ensure('fam_music_source', 'Cool Artist', 'Cool Artist - 1994.mp3'))
+    HERE.join('1khz_sine_2.mp3').copy(tmpdir_module.ensure('fam_working_dir', 'Cool Artist', 'Cool Artist - 1994.mp3'))
 
     # Run multiple times for directory removal.
     for i in range(5, -1, -1):
