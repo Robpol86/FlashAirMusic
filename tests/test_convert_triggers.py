@@ -3,8 +3,6 @@
 import asyncio
 import signal
 
-import pytest
-
 from flash_air_music.__main__ import shutdown
 from flash_air_music.convert.triggers import periodically_convert, watch_directory
 
@@ -75,14 +73,12 @@ def alter_file_system(loop, shutdown_future, caplog, tmpdir):
     yield from shutdown(loop, signal.SIGTERM, shutdown_future)
 
 
-@pytest.mark.parametrize('mode', ['locked', 'normal'])
-def test_periodically_convert(monkeypatch, tmpdir, caplog, mode):
+def test_periodically_convert(monkeypatch, tmpdir, caplog):
     """Test periodically_convert() function.
 
     :param monkeypatch: pytest fixture.
     :param tmpdir: pytest fixture.
     :param caplog: pytest extension fixture.
-    :param str mode: Scenario to test for.
     """
     config = {
         '--music-source': str(tmpdir.ensure_dir('source')),
@@ -90,12 +86,10 @@ def test_periodically_convert(monkeypatch, tmpdir, caplog, mode):
         '--working-dir': str(tmpdir),
     }
     loop = asyncio.get_event_loop()
-    semaphore = asyncio.Semaphore(0 if mode == 'locked' else 1)
     shutdown_future = asyncio.Future()
     monkeypatch.setattr('flash_air_music.convert.run.GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr('flash_air_music.convert.transcode.GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr('flash_air_music.convert.triggers.EVERY_SECONDS_PERIODIC', 1)
-    monkeypatch.setattr('flash_air_music.convert.triggers.SEMAPHORE', semaphore)
 
     loop.run_until_complete(asyncio.wait([
         shutdown_after_string(loop, shutdown_future, caplog, 'periodically_convert() waking up.'),
@@ -103,12 +97,7 @@ def test_periodically_convert(monkeypatch, tmpdir, caplog, mode):
     ], timeout=30))
 
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
-    if mode == 'locked':
-        assert 'Semaphore is locked, skipping this iteration.' in messages
-        assert 'Waiting for semaphore...' not in messages
-    else:
-        assert 'Semaphore is locked, skipping this iteration.' not in messages
-        assert 'Waiting for semaphore...' in messages
+    assert 'Waiting for semaphore...' in messages
 
 
 def test_watch_directory(monkeypatch, tmpdir, caplog):

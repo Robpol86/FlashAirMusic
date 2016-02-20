@@ -5,7 +5,6 @@ import hashlib
 import logging
 import os
 
-from flash_air_music.common import SEMAPHORE
 from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
 from flash_air_music.convert.discover import walk_source
 from flash_air_music.convert.run import run
@@ -23,10 +22,7 @@ def periodically_convert(loop, shutdown_future):
     """
     log = logging.getLogger(__name__)
     while True:
-        if SEMAPHORE.locked():
-            log.debug('Semaphore is locked, skipping this iteration.')
-        else:
-            yield from run(loop, shutdown_future)
+        yield from run(loop, shutdown_future)
         log.debug('periodically_convert() sleeping %d seconds.', EVERY_SECONDS_PERIODIC)
         for _ in range(EVERY_SECONDS_PERIODIC):
             yield from asyncio.sleep(1)
