@@ -32,7 +32,7 @@ def test_convert_file_success(monkeypatch, tmpdir, caplog):
 
     # Run.
     loop = asyncio.get_event_loop()
-    command, exit_status = loop.run_until_complete(transcode.convert_file(loop, asyncio.Future(), song))[1:]
+    command, exit_status = loop.run_until_complete(transcode.convert_file(loop, song))[1:]
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify.
@@ -76,7 +76,7 @@ def test_convert_file_failure(monkeypatch, tmpdir, caplog, delete):
 
     # Run.
     loop = asyncio.get_event_loop()
-    command, exit_status = loop.run_until_complete(transcode.convert_file(loop, asyncio.Future(), song))[1:]
+    command, exit_status = loop.run_until_complete(transcode.convert_file(loop, song))[1:]
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify.
@@ -121,7 +121,7 @@ def test_convert_file_deadlock(monkeypatch, tmpdir, caplog):
 
     # Run.
     loop = asyncio.get_event_loop()
-    command, exit_status = loop.run_until_complete(transcode.convert_file(loop, asyncio.Future(), song))[1:]
+    command, exit_status = loop.run_until_complete(transcode.convert_file(loop, song))[1:]
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify.
@@ -177,7 +177,7 @@ def test_convert_file_timeout(monkeypatch, tmpdir, caplog, exit_signal):
 
     # Run.
     loop = asyncio.get_event_loop()
-    exit_status = loop.run_until_complete(transcode.convert_file(loop, asyncio.Future(), song))[-1]
+    exit_status = loop.run_until_complete(transcode.convert_file(loop, song))[-1]
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify.
@@ -224,7 +224,7 @@ def test_convert_songs_errors(monkeypatch, tmpdir, caplog, mode):
 
     # Run.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(transcode.convert_songs(loop, asyncio.Future(), songs))
+    loop.run_until_complete(transcode.convert_songs(loop, songs))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify files.
@@ -264,7 +264,7 @@ def test_convert_songs_single(monkeypatch, tmpdir, caplog):
 
     # Run.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(transcode.convert_songs(loop, asyncio.Future(), songs))
+    loop.run_until_complete(transcode.convert_songs(loop, songs))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify.
@@ -301,7 +301,7 @@ def test_convert_songs_semaphore(monkeypatch, tmpdir, caplog):
 
     # Run.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(transcode.convert_songs(loop, asyncio.Future(), songs))
+    loop.run_until_complete(transcode.convert_songs(loop, songs))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify.

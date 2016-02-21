@@ -4,6 +4,7 @@ import asyncio
 import os
 
 SEMAPHORE = asyncio.Semaphore()  # Main semaphore shared by convert and upload coroutines/functions.
+SHUTDOWN = asyncio.Future()  # Signals service shutdown if future has result.
 
 
 class BaseSong(object):

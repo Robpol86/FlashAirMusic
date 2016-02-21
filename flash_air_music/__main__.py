@@ -33,6 +33,7 @@ import sys
 from flash_air_music.configuration import initialize_config, SIGNALS_INT_TO_NAME, update_config
 from flash_air_music.convert.triggers import EVERY_SECONDS_PERIODIC, periodically_convert, watch_directory
 from flash_air_music.exceptions import BaseError
+from flash_air_music.lib import SHUTDOWN
 from flash_air_music.upload.triggers import watch_for_flashair
 
 
@@ -40,17 +41,16 @@ def main():
     """Main function."""
     log = logging.getLogger(__name__)
     loop = asyncio.get_event_loop()
-    shutdown_future = asyncio.Future()
 
     log.info('Scheduling signal handlers.')
     loop.add_signal_handler(signal.SIGHUP, update_config, __doc__, signal.SIGHUP)
-    loop.add_signal_handler(signal.SIGINT, loop.create_task, shutdown(loop, signal.SIGINT, shutdown_future, True))
-    loop.add_signal_handler(signal.SIGTERM, loop.create_task, shutdown(loop, signal.SIGTERM, shutdown_future, True))
+    loop.add_signal_handler(signal.SIGINT, loop.create_task, shutdown(loop, signal.SIGINT, True))
+    loop.add_signal_handler(signal.SIGTERM, loop.create_task, shutdown(loop, signal.SIGTERM, True))
 
     log.info('Scheduling periodic tasks.')
-    loop.call_later(EVERY_SECONDS_PERIODIC, loop.create_task, periodically_convert(loop, shutdown_future))
-    loop.create_task(watch_directory(loop, shutdown_future))
-    loop.create_task(watch_for_flashair(shutdown_future))
+    loop.call_later(EVERY_SECONDS_PERIODIC, loop.create_task, periodically_convert(loop))
+    loop.create_task(watch_directory(loop))
+    loop.create_task(watch_for_flashair())
 
     log.info('Running main loop.')
     loop.run_forever()
@@ -59,17 +59,16 @@ def main():
 
 
 @asyncio.coroutine
-def shutdown(loop, signum, shutdown_future, stop_loop=False):
+def shutdown(loop, signum, stop_loop=False):
     """Cleanup and shut down the program.
 
     :param loop: AsyncIO event loop object.
     :param int signum: Signal caught.
-    :param asyncio.Future shutdown_future: Signals process shutdown to periodic coroutines.
     :param bool stop_loop: Stop the event loop after tasks complete or 5 seconds pass.
     """
     log = logging.getLogger(__name__)
     log.info('Caught signal %d (%s). Shutting down.', signum, '/'.join(SIGNALS_INT_TO_NAME[signum]))
-    shutdown_future.set_result(signum)
+    SHUTDOWN.set_result(signum)
     if stop_loop:
         loop.create_task(stop(loop))
 

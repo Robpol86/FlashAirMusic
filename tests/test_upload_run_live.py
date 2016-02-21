@@ -1,7 +1,6 @@
 """Test functions in module on a real live FlashAir card."""
 
 import asyncio
-import logging
 import os
 import time
 
@@ -41,13 +40,13 @@ def test_scan_empty(caplog):
 
     :param caplog: pytest extension fixture.
     """
-    songs, delete_paths, tzinfo = run.scan(IP_ADDR, asyncio.Future())
+    songs, delete_paths, tzinfo = run.scan(IP_ADDR)
     assert [s.target for s in songs] == [TARGET_DIR + '/song1.mp3']
     assert not delete_paths
     assert tzinfo
 
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
-    errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelno > logging.INFO]
+    errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelname == 'ERROR']
     assert not errors
     assert 'Directory {} does not exist on FlashAir card.'.format(TARGET_DIR) in messages
 
@@ -60,9 +59,9 @@ def test_run_upload_one(tmpdir_module, caplog):
     """
     # Run.
     loop = asyncio.get_event_loop()
-    success = loop.run_until_complete(run.run(IP_ADDR, asyncio.Future()))
+    success = loop.run_until_complete(run.run(IP_ADDR))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
-    errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelno > logging.INFO]
+    errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelname == 'ERROR']
 
     # Check logs.
     assert not errors
@@ -75,7 +74,7 @@ def test_run_upload_one(tmpdir_module, caplog):
     assert success
 
     # Verify consistency.
-    songs, delete_paths = run.scan(IP_ADDR, asyncio.Future())[:2]
+    songs, delete_paths = run.scan(IP_ADDR)[:2]
     assert not songs
     assert not delete_paths
 
@@ -92,9 +91,9 @@ def test_run_upload_subdir(tmpdir_module, caplog):
 
     # Run.
     loop = asyncio.get_event_loop()
-    success = loop.run_until_complete(run.run(IP_ADDR, asyncio.Future()))
+    success = loop.run_until_complete(run.run(IP_ADDR))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
-    errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelno > logging.INFO]
+    errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelname == 'ERROR']
 
     # Check logs.
     assert not errors
@@ -104,14 +103,14 @@ def test_run_upload_subdir(tmpdir_module, caplog):
         'Uploading file: {}'.format(tmpdir_module.join('fam_working_dir', 'subdir1', 'song3.mp3')),
         'Uploading file: {}'.format(tmpdir_module.join('fam_working_dir', 'song2.mp3')),
     ]
-    assert actual == expected
+    assert set(actual) == set(expected)
     actual = [m for m in messages if m.startswith('Deleting: ')]
     assert not actual
     assert 'Done updating FlashAir card.' in messages
     assert success
 
     # Verify consistency.
-    songs, delete_paths = run.scan(IP_ADDR, asyncio.Future())[:2]
+    songs, delete_paths = run.scan(IP_ADDR)[:2]
     assert not songs
     assert not delete_paths
 
@@ -130,9 +129,9 @@ def test_delete_and_spaces(tmpdir_module, caplog):
     for i in range(5, -1, -1):
         # Run.
         loop = asyncio.get_event_loop()
-        success = loop.run_until_complete(run.run(IP_ADDR, asyncio.Future()))
+        success = loop.run_until_complete(run.run(IP_ADDR))
         messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
-        errors = [r.message for r in caplog.records if r.name.startswith('flash_air_mus') and r.levelno > logging.INFO]
+        errors = [r.message for r in caplog.records if r.name.startswith('flash_air_music') and r.levelname == 'ERROR']
 
         # Check logs.
         assert not errors
@@ -143,7 +142,7 @@ def test_delete_and_spaces(tmpdir_module, caplog):
         assert success
 
         # Verify consistency.
-        songs, delete_paths = run.scan(IP_ADDR, asyncio.Future())[:2]
+        songs, delete_paths = run.scan(IP_ADDR)[:2]
         assert not songs
         if i not in (1, 0):
             assert delete_paths

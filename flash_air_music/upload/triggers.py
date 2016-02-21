@@ -5,6 +5,7 @@ import logging
 from socket import error, socket
 
 from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
+from flash_air_music.lib import SHUTDOWN
 from flash_air_music.upload.run import run
 
 EVERY_SECONDS_CHECK = 5
@@ -12,11 +13,8 @@ SUCCESS_SLEEP = 5 * 60
 
 
 @asyncio.coroutine
-def watch_for_flashair(shutdown_future):
-    """Try to connect to FlashAir card every EVERY_SECONDS_CHECK. Runs coroutine if card responds.
-
-    :param asyncio.Future shutdown_future: Main process shutdown signal.
-    """
+def watch_for_flashair():
+    """Try to connect to FlashAir card every EVERY_SECONDS_CHECK. Runs coroutine if card responds."""
     log = logging.getLogger(__name__)
 
     while True:
@@ -31,7 +29,7 @@ def watch_for_flashair(shutdown_future):
                 success = False
             else:
                 log.debug('%s is reachable. calling run().', GLOBAL_MUTABLE_CONFIG['--ip-addr'])
-                success = yield from run(GLOBAL_MUTABLE_CONFIG['--ip-addr'], shutdown_future)
+                success = yield from run(GLOBAL_MUTABLE_CONFIG['--ip-addr'])
         else:
             log.debug('No IP address specified. Skipping watch_for_flashair().')
             success = True
@@ -42,7 +40,7 @@ def watch_for_flashair(shutdown_future):
 
         # Sleep.
         for _ in range(sleep_for):
-            if shutdown_future.done():
+            if SHUTDOWN.done():
                 log.debug('watch_for_flashair() saw shutdown signal.')
                 return
             yield from asyncio.sleep(1)

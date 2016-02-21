@@ -4,10 +4,10 @@ import asyncio
 import logging
 import os
 
-from flash_air_music.common import SEMAPHORE
 from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
 from flash_air_music.convert.discover import files_dirs_to_delete, get_songs
 from flash_air_music.convert.transcode import convert_songs
+from flash_air_music.lib import SEMAPHORE
 
 CHANGE_WAIT = 0.5  # Seconds.
 
@@ -48,18 +48,17 @@ def scan_wait():
 
 
 @asyncio.coroutine
-def convert_cleanup(loop, shutdown_future, songs, delete_files, remove_dirs):
+def convert_cleanup(loop, songs, delete_files, remove_dirs):
     """Convert songs, delete abandoned songs in target directory, remove empty directories in target directory.
 
     :param loop: AsyncIO event loop object.
-    :param asyncio.Future shutdown_future: Shutdown signal.
     :param songs: List of Song instances from scan_wait().
     :param delete_files: List of files to delete from scan_wait().
     :param remove_dirs: List of directories to delete from scan_wait().
     """
     log = logging.getLogger(__name__)
     if songs:
-        yield from convert_songs(loop, shutdown_future, songs)
+        yield from convert_songs(loop, songs)
     for file_ in delete_files:
         log.info('Deleting %s', file_)
         try:
@@ -75,11 +74,10 @@ def convert_cleanup(loop, shutdown_future, songs, delete_files, remove_dirs):
 
 
 @asyncio.coroutine
-def run(loop, shutdown_future):
+def run(loop):
     """Wait for semaphore before running scan_convert_cleanup().
 
     :param loop: AsyncIO event loop object.
-    :param asyncio.Future shutdown_future: Shutdown signal.
     """
     log = logging.getLogger(__name__)
     log.debug('Waiting for semaphore...')
@@ -87,5 +85,5 @@ def run(loop, shutdown_future):
         log.debug('Got semaphore lock.')
         songs, delete_files, remove_dirs = yield from scan_wait()
         if any([songs, delete_files, remove_dirs]):
-            yield from convert_cleanup(loop, shutdown_future, songs, delete_files, remove_dirs)
+            yield from convert_cleanup(loop, songs, delete_files, remove_dirs)
     log.debug('Released lock.')

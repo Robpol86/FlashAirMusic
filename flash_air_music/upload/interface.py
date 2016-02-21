@@ -7,6 +7,7 @@ import re
 import time
 
 from flash_air_music import exceptions
+from flash_air_music.lib import SHUTDOWN
 from flash_air_music.upload import api
 
 LUA_HELPER_SCRIPT = os.path.join(os.path.dirname(__file__), '_fam_move_touch.lua')
@@ -73,7 +74,7 @@ def get_card_time_zone(ip_addr):
     return datetime.timezone(datetime.timedelta(hours=fifteen_min_offset / 4.0))
 
 
-def get_files(ip_addr, tzinfo, directory, shutdown_future):
+def get_files(ip_addr, tzinfo, directory):
     """Recursively get a list of MP3s currently on the SD card in a directory.
 
     API is not recursive, so this function will call itself on every directory it encounters.
@@ -91,7 +92,6 @@ def get_files(ip_addr, tzinfo, directory, shutdown_future):
     :param str ip_addr: IP address of FlashAir to connect to.
     :param datetime.timezone tzinfo: Timezone the card is set to.
     :param str directory: Remote directory to get file list from.
-    :param asyncio.Future shutdown_future: Shutdown signal.
 
     :return: Files dict ({file path: (file size, mtime)}) and list of empty dirs.
     :rtype: tuple
@@ -100,7 +100,7 @@ def get_files(ip_addr, tzinfo, directory, shutdown_future):
     directory = directory.rstrip('/')  # Remove trailing slash.
 
     # Handle shutdown.
-    if shutdown_future.done():
+    if SHUTDOWN.done():
         log.info('Service shutdown initiated, not getting files.')
         return dict(), list()
 
@@ -115,7 +115,7 @@ def get_files(ip_addr, tzinfo, directory, shutdown_future):
     for name, size, attr, fdate, ftime in (i.groups() for i in regex.finditer(response_text.replace('\r', ''))):
         if int(attr) & 16:  # Handle directory.
             try:
-                subdir = get_files(ip_addr, tzinfo, '{}/{}'.format(directory, name), shutdown_future)  # Recurse into.
+                subdir = get_files(ip_addr, tzinfo, '{}/{}'.format(directory, name))  # Recurse into.
             except exceptions.FlashAirURLTooLong:
                 log.warning('Directory path too long, ignoring: %s', name)
                 continue
@@ -130,7 +130,7 @@ def get_files(ip_addr, tzinfo, directory, shutdown_future):
     return files, empty_dirs
 
 
-def delete_files_dirs(ip_addr, paths, shutdown_future):
+def delete_files_dirs(ip_addr, paths):
     """Delete files and directories on the FlashAir card.
 
     :raise FlashAirHTTPError: When API returns non-200 HTTP status code.
@@ -138,12 +138,11 @@ def delete_files_dirs(ip_addr, paths, shutdown_future):
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param iter paths: List of file/dir paths to remove.
-    :param asyncio.Future shutdown_future: Shutdown signal.
     """
     log = logging.getLogger(__name__)
     sorted_paths = sorted((p for p in paths if p.rstrip('/') not in DO_NOT_DELETE), reverse=True)
     for path in sorted_paths:
-        if shutdown_future.done():
+        if SHUTDOWN.done():
             logging.getLogger(__name__).info('Service shutdown initiated, stop deleting items.')
             break
         log.info('Deleting: %s', path)
@@ -188,7 +187,7 @@ def initialize_upload(ip_addr, tzinfo):
         raise exceptions.FlashAirBadResponse(text, None)
 
 
-def upload_files(ip_addr, files_attrs, shutdown_future):
+def upload_files(ip_addr, files_attrs):
     """Upload files to the card one at a time.
 
     Each item in the `files_attrs` list is a tuple of:
@@ -201,14 +200,13 @@ def upload_files(ip_addr, files_attrs, shutdown_future):
 
     :param str ip_addr: IP address of FlashAir to connect to.
     :param iter files_attrs: List of tuples about files and how to upload them.
-    :param asyncio.Future shutdown_future: Shutdown signal.
     """
     log = logging.getLogger(__name__)
     script_path = '{}/{}'.format(REMOTE_ROOT_DIRECTORY, os.path.basename(LUA_HELPER_SCRIPT))
     stage_path = '{}/{}'.format(REMOTE_ROOT_DIRECTORY, UPLOAD_STAGE_NAME)
 
     for source, destination, mtime in files_attrs:
-        if shutdown_future.done():
+        if SHUTDOWN.done():
             logging.getLogger(__name__).info('Service shutdown initiated, stop uploading songs.')
             break
         log.info('Uploading file: %s', source)

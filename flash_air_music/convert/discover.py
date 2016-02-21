@@ -5,8 +5,8 @@ Target mp3 files hold source metadata in their ID3 comment tags. Each mp3 file i
 
 import os
 
-from flash_air_music.common import BaseSong
 from flash_air_music.convert.id3_flac_tags import read_stored_metadata
+from flash_air_music.lib import BaseSong
 
 VALID_SOURCE_EXTENSIONS = ('.flac', '.mp3')
 

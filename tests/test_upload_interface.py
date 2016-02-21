@@ -1,6 +1,5 @@
 """Test functions in module."""
 
-import asyncio
 import os
 
 import pytest
@@ -40,20 +39,19 @@ def test_get_files_empty_root(monkeypatch):
     :param monkeypatch: pytest fixture.
     """
     monkeypatch.setattr(api, 'command_get_file_list', lambda *_: 'WLANSD_FILELIST\r\n')
-    actual = interface.get_files('flashair', TZINFO, '/MUSIC', asyncio.Future())
+    actual = interface.get_files('flashair', TZINFO, '/MUSIC')
     expected = dict(), ['/MUSIC']
     assert actual == expected
 
 
 @pytest.mark.parametrize('mode', ['ignore', 'shutdown', 'one', 'two', 'three partial'])
-def test_get_files_simple(monkeypatch, mode):
+def test_get_files_simple(monkeypatch, shutdown_future, mode):
     """Test get_files() and ftime_to_epoch() with simple file structure and no directories.
 
     :param monkeypatch: pytest fixture.
+    :param shutdown_future: conftest fixture.
     :param str mode: Scenario to test for.
     """
-    shutdown_future = asyncio.Future()
-
     # Setup responses and expectations.
     if mode == 'ignore':
         body = 'WLANSD_FILELIST\r\n/MUSIC,ignore.dat,7734072,32,18062,43980\r\n'
@@ -81,7 +79,7 @@ def test_get_files_simple(monkeypatch, mode):
     monkeypatch.setattr(api, 'command_get_file_list', lambda *_: body)
 
     # Run.
-    actual = interface.get_files('flashair', TZINFO, '/MUSIC', shutdown_future)
+    actual = interface.get_files('flashair', TZINFO, '/MUSIC')
     assert actual == expected
 
 
@@ -113,7 +111,7 @@ def test_get_files_recursive(monkeypatch):
     monkeypatch.setattr(api, 'command_get_file_list', request_callback)
 
     # Run.
-    actual = interface.get_files('flashair', TZINFO, '/MUSIC', asyncio.Future())
+    actual = interface.get_files('flashair', TZINFO, '/MUSIC')
     expected = (
         {
             '/MUSIC/04 Slip.mp3': (11869064, 1247280790),
@@ -168,7 +166,7 @@ def test_get_files_long_file_names(monkeypatch, caplog):
     monkeypatch.setattr(api, 'command_get_file_list', request_callback)
 
     # Run.
-    actual = interface.get_files('flashair', TZINFO, '/MUSIC', asyncio.Future())
+    actual = interface.get_files('flashair', TZINFO, '/MUSIC')
     expected = (
         {
             ('/MUSIC/Bacon ipsum dolor amet corned beef fatback bresaola meatloaf, landjaeger ham hock t-bone ground ro'
@@ -265,7 +263,7 @@ def test_get_files_special_characters(monkeypatch, caplog):
     monkeypatch.setattr(api, 'command_get_file_list', request_callback)
 
     # Run.
-    actual = interface.get_files('flashair', TZINFO, '/MUSIC', asyncio.Future())
+    actual = interface.get_files('flashair', TZINFO, '/MUSIC')
     expected = (
         {
             '/MUSIC/~/s.mp3': (11869064, 1247280790),
@@ -307,15 +305,15 @@ def test_get_files_special_characters(monkeypatch, caplog):
 
 
 @pytest.mark.parametrize('shutdown', [False, True])
-def test_delete_files_dirs(monkeypatch, shutdown):
+def test_delete_files_dirs(monkeypatch, shutdown_future, shutdown):
     """Test delete_files_dirs().
 
     :param monkeypatch: pytest fixture.
+    :param shutdown_future: conftest fixture.
     :param bool shutdown: Test shutdown handling.
     """
     order = list()
     monkeypatch.setattr(api, 'upload_delete', lambda _, p: order.append(p))
-    shutdown_future = asyncio.Future()
 
     if shutdown:
         shutdown_future.set_result(True)
@@ -338,7 +336,7 @@ def test_delete_files_dirs(monkeypatch, shutdown):
         '/MUSIC/subdir/b.mp3',
     ]
 
-    interface.delete_files_dirs('flashair', paths, shutdown_future)
+    interface.delete_files_dirs('flashair', paths)
     assert order == expected
 
 
@@ -377,16 +375,16 @@ def test_initialize_upload(monkeypatch, mode):
 
 
 @pytest.mark.parametrize('shutdown', [False, True])
-def test_upload_files(monkeypatch, shutdown):
+def test_upload_files(monkeypatch, shutdown_future, shutdown):
     """Test upload_files().
 
     :param monkeypatch: pytest fixture.
+    :param shutdown_future: conftest fixture.
     :param bool shutdown: Test shutdown handling.
     """
     upload, execute = list(), list()
     monkeypatch.setattr(api, 'upload_upload_file', lambda *args: upload.append(args[-1].name))
     monkeypatch.setattr(api, 'lua_script_execute', lambda *args: execute.append(args[-1]))
-    shutdown_future = asyncio.Future()
 
     if shutdown:
         shutdown_future.set_result(True)
@@ -395,7 +393,7 @@ def test_upload_files(monkeypatch, shutdown):
         expected = [(str(HERE.join('1khz_sine_2.mp3')), '/MUSIC/_fam_staged.bin 1454388430 /MUSIC/song.mp3')]
 
     files_attrs = [(str(HERE.join('1khz_sine_2.mp3')), '/MUSIC/song.mp3', 1454388430)]
-    interface.upload_files('flashair', files_attrs, shutdown_future)
+    interface.upload_files('flashair', files_attrs)
 
     actual = list(zip(upload, execute))
     assert actual == expected

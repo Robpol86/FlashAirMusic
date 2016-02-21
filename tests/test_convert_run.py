@@ -28,17 +28,16 @@ def write_to_file_slowly(caplog, path):
 
 
 @asyncio.coroutine
-def shutdown_after_start(loop, shutdown_future, caplog, signum):
+def shutdown_after_start(loop, caplog, signum):
     """Stop currently running conversions.
 
     :param loop: AsyncIO event loop object.
-    :param asyncio.Future shutdown_future: Shutdown signal.
     :param caplog: pytest extension fixture.
     :param int signum: Signal to simulate.
     """
     while not any(True for r in caplog.records if re.match(r'Process \d+ still running\.\.\.', r.message)):
         yield from asyncio.sleep(0.1)
-    yield from shutdown(loop, signum, shutdown_future)
+    yield from shutdown(loop, signum)
 
 
 @pytest.mark.parametrize('mode', ['none', 'static', 'wait'])
@@ -99,7 +98,7 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
     loop = asyncio.get_event_loop()
 
     if mode == 'nothing':
-        loop.run_until_complete(run.convert_cleanup(loop, asyncio.Future(), [], [], []))
+        loop.run_until_complete(run.convert_cleanup(loop, [], [], []))
         assert not [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
         return
 
@@ -118,7 +117,7 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
 
     # Run.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run.convert_cleanup(loop, asyncio.Future(), songs, delete_files, remove_dirs))
+    loop.run_until_complete(run.convert_cleanup(loop, songs, delete_files, remove_dirs))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify.
@@ -161,18 +160,19 @@ def test_run(monkeypatch, tmpdir, mode):
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', config)
 
     if mode == 'nothing':
-        loop.run_until_complete(run.run(loop, asyncio.Future()))
+        loop.run_until_complete(run.run(loop))
         assert not semaphore.locked()
         assert not tmpdir.join('song.mp3').check()
         return
 
     HERE.join('1khz_sine_2.mp3').copy(source_file)
     assert not tmpdir.join('song.mp3').check()
-    loop.run_until_complete(run.run(loop, asyncio.Future()))
+    loop.run_until_complete(run.run(loop))
     assert not semaphore.locked()
     assert tmpdir.join('song.mp3').check(file=True)
 
 
+@pytest.mark.usefixtures('shutdown_future')
 @pytest.mark.parametrize('signum', [signal.SIGTERM, signal.SIGINT])
 def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
     """Test run() cancellation handling.
@@ -206,18 +206,17 @@ def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
     }
     loop = asyncio.get_event_loop()
     semaphore = asyncio.Semaphore()
-    shutdown_future = asyncio.Future()
     monkeypatch.setattr(run, 'GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr(run, 'SEMAPHORE', semaphore)
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', config)
 
     loop.run_until_complete(asyncio.wait([
-        shutdown_after_start(loop, shutdown_future, caplog, signum),
-        run.run(loop, shutdown_future),
+        shutdown_after_start(loop, caplog, signum),
+        run.run(loop),
     ], timeout=30))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     assert [i for i in messages if i.startswith('Caught signal {}'.format(signum))]
     killed = [i for i in messages if re.match(r'Process \d+ exited {}'.format(signum), i)]
-    skipped = [i for i in messages if i == 'Skipping due to shutdown_future signal.']
+    skipped = [i for i in messages if i == 'Skipping due to shutdown signal.']
     assert len(killed) + len(skipped) == 10

@@ -38,4 +38,4 @@ class FlashAirURLTooLong(FlashAirError):
 
 
 class ShuttingDown(BaseError):
-    """Raised when shutdown_future is set."""
+    """Raised when SHUTDOWN is set."""

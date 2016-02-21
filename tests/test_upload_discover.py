@@ -1,7 +1,5 @@
 """Test functions in module."""
 
-import asyncio
-
 import pytest
 
 from flash_air_music.exceptions import FlashAirDirNotFoundError, FlashAirError, FlashAirNetworkError, FlashAirURLTooLong
@@ -72,19 +70,19 @@ def test_song_path(tmpdir):
     assert song.needs_action is True
 
 
-def test_get_songs(monkeypatch, tmpdir):
+def test_get_songs(monkeypatch, tmpdir, shutdown_future):
     """Test get_songs() function.
 
     :param monkeypatch: pytest fixture.
     :param tmpdir: pytest fixture.
+    :param shutdown_future: conftest fixture.
     """
-    shutdown_future = asyncio.Future()
     source_dir = tmpdir.ensure_dir('source')
     remote_files, remote_empty_dirs = dict(), list()
     monkeypatch.setattr(discover, 'get_files', lambda *_: (remote_files, remote_empty_dirs))
 
     # Test empty.
-    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, shutdown_future)
+    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO)
     assert not songs
     assert not valid_targets
     assert files == remote_files
@@ -92,7 +90,7 @@ def test_get_songs(monkeypatch, tmpdir):
 
     # Test ignore.
     source_dir.ensure('ignore.txt')
-    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, shutdown_future)
+    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO)
     assert not songs
     assert not valid_targets
     assert files == remote_files
@@ -106,7 +104,7 @@ def test_get_songs(monkeypatch, tmpdir):
     remote_empty_dirs.append('/MUSIC/empty_dir')
     remote_files['/MUSIC/existing.mp3'] = (existing.stat().size, existing.stat().mtime)
     remote_files['/MUSIC/delete.mp3'] = (existing.stat().size, existing.stat().mtime)
-    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, shutdown_future)
+    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO)
     assert len(songs) == 1
     assert songs[0].source == str(new)
     assert songs[0].target == '/MUSIC/new.mp3'
@@ -119,13 +117,13 @@ def test_get_songs(monkeypatch, tmpdir):
         """Raise exception."""
         raise FlashAirDirNotFoundError('Error')
     monkeypatch.setattr(discover, 'get_files', func)
-    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, shutdown_future)
+    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO)
     assert sorted(s.target for s in songs) == ['/MUSIC/existing.mp3', '/MUSIC/new.mp3']
     assert sorted(valid_targets) == ['/MUSIC/existing.mp3', '/MUSIC/new.mp3']
 
     # Test shutdown.
     shutdown_future.set_result(True)
-    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, shutdown_future)
+    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO)
     assert not songs
     assert not valid_targets
     assert not files
@@ -136,7 +134,7 @@ def test_get_songs(monkeypatch, tmpdir):
         """Raise exception."""
         raise FlashAirError('Error')
     monkeypatch.setattr(discover, 'get_files', func)
-    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, shutdown_future)
+    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO)
     assert not songs
     assert not valid_targets
     assert not files
@@ -147,7 +145,7 @@ def test_get_songs(monkeypatch, tmpdir):
         """Raise exception."""
         raise FlashAirURLTooLong('Error')
     monkeypatch.setattr(discover, 'get_files', func)
-    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, shutdown_future)
+    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO)
     assert not songs
     assert not valid_targets
     assert not files
@@ -159,7 +157,7 @@ def test_get_songs(monkeypatch, tmpdir):
         raise FlashAirNetworkError('Error')
     monkeypatch.setattr(discover, 'get_files', func)
     with pytest.raises(FlashAirNetworkError):
-        discover.get_songs(str(source_dir), 'flashair', TZINFO, shutdown_future)
+        discover.get_songs(str(source_dir), 'flashair', TZINFO)
 
 
 def test_get_songs_subdirectories(monkeypatch, tmpdir):
@@ -185,7 +183,7 @@ def test_get_songs_subdirectories(monkeypatch, tmpdir):
     HERE.join('1khz_sine_2.mp3').copy(source_dir_d.join('song5.mp3'))
 
     # Test those files.
-    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO, asyncio.Future())
+    songs, valid_targets, files, empty_dirs = discover.get_songs(str(source_dir), 'flashair', TZINFO)
     assert len(songs) == 5
     assert len(valid_targets) == 5
     expected = {

@@ -134,6 +134,7 @@ def test_empty(tmpdir):
     assert 'watch_directory() saw shutdown signal.' in stdout
     assert 'Stopping loop.' in stdout
     assert 'Main loop has exited.' in stdout
+    assert 'Task was destroyed but it is pending!' not in stdout
     assert 'Traceback' not in stdout
     assert 'ERROR' not in stdout
     assert 'BUG!' not in stdout
@@ -182,6 +183,7 @@ def test_songs(tmpdir):
     assert 'Done converting 3 file(s) (0 failed).' in stdout
     assert 'Stopping loop.' in stdout
     assert 'Main loop has exited.' in stdout
+    assert 'Task was destroyed but it is pending!' not in stdout
     assert 'Traceback' not in stdout
     assert 'ERROR' not in stdout
     assert 'BUG!' not in stdout
@@ -254,6 +256,7 @@ def test_interrupt_ffmpeg(monkeypatch, tmpdir, signum):
     assert 'Done converting 3 file(s) (3 failed).' in stdout
     assert 'Stopping loop.' in stdout
     assert 'Main loop has exited.' in stdout
+    assert 'Task was destroyed but it is pending!' not in stdout
     assert 'Traceback' not in stdout
     assert 'BUG!' not in stdout
     assert process.poll() == 0

@@ -32,13 +32,13 @@ def test_scan(monkeypatch, exc):
     monkeypatch.setattr(run, 'files_dirs_to_delete', lambda *_: {4, 5, 6})
 
     if exc != FlashAirNetworkError:
-        actual = run.scan('', asyncio.Future())
+        actual = run.scan('')
         expected = (list(), set(), None) if exc == FlashAirError else ([1, 2, 3], {4, 5, 6}, TZINFO)
         assert actual == expected
         return
 
     with pytest.raises(FlashAirNetworkError):
-        run.scan('', asyncio.Future())
+        run.scan('')
 
 
 @pytest.mark.parametrize('exc', [FlashAirURLTooLong, FlashAirNetworkError, FlashAirError, None])
@@ -67,9 +67,9 @@ def test_upload_cleanup_initialize_upload(monkeypatch, tmpdir, caplog, exc):
 
     if exc == FlashAirNetworkError:
         with pytest.raises(FlashAirNetworkError):
-            run.upload_cleanup('', songs, delete_paths, TZINFO, asyncio.Future())
+            run.upload_cleanup('', songs, delete_paths, TZINFO)
     else:
-        run.upload_cleanup('', songs, delete_paths, TZINFO, asyncio.Future())
+        run.upload_cleanup('', songs, delete_paths, TZINFO)
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     if exc:
@@ -109,9 +109,9 @@ def test_upload_cleanup_delete_files_dirs(monkeypatch, caplog, exc):
 
     if exc == FlashAirNetworkError:
         with pytest.raises(FlashAirNetworkError):
-            run.upload_cleanup('', list(), delete_paths, TZINFO, asyncio.Future())
+            run.upload_cleanup('', list(), delete_paths, TZINFO)
     else:
-        run.upload_cleanup('', list(), delete_paths, TZINFO, asyncio.Future())
+        run.upload_cleanup('', list(), delete_paths, TZINFO)
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     assert 'Uploading 1 song(s).' not in messages
@@ -152,9 +152,9 @@ def test_upload_cleanup_upload_files(monkeypatch, tmpdir, caplog, exc):
 
     if exc == FlashAirNetworkError:
         with pytest.raises(FlashAirNetworkError):
-            run.upload_cleanup('', songs, list(), TZINFO, asyncio.Future())
+            run.upload_cleanup('', songs, list(), TZINFO)
     else:
-        run.upload_cleanup('', songs, list(), TZINFO, asyncio.Future())
+        run.upload_cleanup('', songs, list(), TZINFO)
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     assert 'Uploading 2 song(s).' in messages
@@ -171,23 +171,23 @@ def test_upload_cleanup_upload_files(monkeypatch, tmpdir, caplog, exc):
 
 
 @pytest.mark.parametrize('mode', ['shutdown', 'nothing to do', 'success'])
-def test_run_quick(monkeypatch, caplog, mode):
+def test_run_quick(monkeypatch, caplog, shutdown_future, mode):
     """Test run() without needing to iterate.
 
     :param monkeypatch: pytest fixture.
     :param caplog: pytest extension fixture.
+    :param shutdown_future: conftest fixture.
     :param str mode: Scenario to test for.
     """
     monkeypatch.setattr(run, 'scan', lambda *_: (list(), [] if mode == 'nothing to do' else ['/MUSIC/empty'], None))
     monkeypatch.setattr(run, 'upload_cleanup', lambda *_: None)
 
-    shutdown_future = asyncio.Future()
     if mode == 'shutdown':
         shutdown_future.set_result(True)
 
     # Run.
     loop = asyncio.get_event_loop()
-    success = loop.run_until_complete(run.run('', shutdown_future))
+    success = loop.run_until_complete(run.run(''))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     if mode == 'shutdown':
@@ -240,7 +240,7 @@ def test_run_slow(monkeypatch, caplog, mode):
 
     # Run.
     loop = asyncio.get_event_loop()
-    success = loop.run_until_complete(run.run('', asyncio.Future()))
+    success = loop.run_until_complete(run.run(''))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     if mode == 'timeout':

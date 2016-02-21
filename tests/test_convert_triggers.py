@@ -3,30 +3,30 @@
 import asyncio
 import signal
 
+import pytest
+
 from flash_air_music.__main__ import shutdown
 from flash_air_music.convert.triggers import periodically_convert, watch_directory
 
 
 @asyncio.coroutine
-def shutdown_after_string(loop, shutdown_future, caplog, stop_after):
+def shutdown_after_string(loop, caplog, stop_after):
     """Stop loop after `stop_after` is found in log records.
 
     :param loop: AsyncIO event loop object.
-    :param asyncio.Future shutdown_future: Shutdown signal.
     :param caplog: pytest extension fixture.
     :param str stop_after: String to watch for in caplog.records.
     """
     while not any(True for r in caplog.records if r.message == stop_after):
         yield from asyncio.sleep(0.1)
-    yield from shutdown(loop, signal.SIGTERM, shutdown_future)
+    yield from shutdown(loop, signal.SIGTERM)
 
 
 @asyncio.coroutine
-def alter_file_system(loop, shutdown_future, caplog, tmpdir):
+def alter_file_system(loop, caplog, tmpdir):
     """Alter file system during different loop iterations to test watch_directory().
 
     :param loop: AsyncIO event loop object.
-    :param asyncio.Future shutdown_future: Shutdown signal.
     :param caplog: pytest extension fixture.
     :param tmpdir: pytest fixture.
     """
@@ -70,9 +70,10 @@ def alter_file_system(loop, shutdown_future, caplog, tmpdir):
         yield from asyncio.sleep(0.1)
 
     # End it.
-    yield from shutdown(loop, signal.SIGTERM, shutdown_future)
+    yield from shutdown(loop, signal.SIGTERM)
 
 
+@pytest.mark.usefixtures('shutdown_future')
 def test_periodically_convert(monkeypatch, tmpdir, caplog):
     """Test periodically_convert() function.
 
@@ -86,20 +87,20 @@ def test_periodically_convert(monkeypatch, tmpdir, caplog):
         '--working-dir': str(tmpdir),
     }
     loop = asyncio.get_event_loop()
-    shutdown_future = asyncio.Future()
     monkeypatch.setattr('flash_air_music.convert.run.GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr('flash_air_music.convert.transcode.GLOBAL_MUTABLE_CONFIG', config)
     monkeypatch.setattr('flash_air_music.convert.triggers.EVERY_SECONDS_PERIODIC', 1)
 
     loop.run_until_complete(asyncio.wait([
-        shutdown_after_string(loop, shutdown_future, caplog, 'periodically_convert() waking up.'),
-        periodically_convert(loop, shutdown_future),
+        shutdown_after_string(loop, caplog, 'periodically_convert() waking up.'),
+        periodically_convert(loop),
     ], timeout=30))
 
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
     assert 'Waiting for semaphore...' in messages
 
 
+@pytest.mark.usefixtures('shutdown_future')
 def test_watch_directory(monkeypatch, tmpdir, caplog):
     """Test watch_directory() function.
 
@@ -116,11 +117,10 @@ def test_watch_directory(monkeypatch, tmpdir, caplog):
     monkeypatch.setattr('flash_air_music.convert.triggers.GLOBAL_MUTABLE_CONFIG', {'--music-source': str(tmpdir)})
     monkeypatch.setattr('flash_air_music.convert.run.scan_wait', asyncio.coroutine(lambda: (None, None, None)))
     loop = asyncio.get_event_loop()
-    shutdown_future = asyncio.Future()
 
     nested_results = loop.run_until_complete(asyncio.wait([
-        alter_file_system(loop, shutdown_future, caplog, tmpdir),
-        watch_directory(loop, shutdown_future),
+        alter_file_system(loop, caplog, tmpdir),
+        watch_directory(loop),
     ], timeout=30))
 
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
