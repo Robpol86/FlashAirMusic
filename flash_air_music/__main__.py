@@ -48,8 +48,8 @@ def main():
     loop.add_signal_handler(signal.SIGTERM, loop.create_task, shutdown(loop, signal.SIGTERM, True))
 
     log.info('Scheduling periodic tasks.')
-    loop.call_later(EVERY_SECONDS_PERIODIC, loop.create_task, periodically_convert(loop))
-    loop.create_task(watch_directory(loop))
+    loop.call_later(EVERY_SECONDS_PERIODIC, loop.create_task, periodically_convert())
+    loop.create_task(watch_directory())
     loop.create_task(watch_for_flashair())
 
     log.info('Running main loop.')

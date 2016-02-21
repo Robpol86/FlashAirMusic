@@ -15,14 +15,11 @@ EVERY_SECONDS_WATCH = 5 * 60
 
 
 @asyncio.coroutine
-def periodically_convert(loop):
-    """Call run() every EVERY_SECONDS_PERIODIC unless semaphore is locked.
-
-    :param loop: AsyncIO event loop object.
-    """
+def periodically_convert():
+    """Call run() every EVERY_SECONDS_PERIODIC unless semaphore is locked."""
     log = logging.getLogger(__name__)
     while True:
-        yield from run(loop)
+        yield from run()
         log.debug('periodically_convert() sleeping %d seconds.', EVERY_SECONDS_PERIODIC)
         for _ in range(EVERY_SECONDS_PERIODIC):
             yield from asyncio.sleep(1)
@@ -33,12 +30,10 @@ def periodically_convert(loop):
 
 
 @asyncio.coroutine
-def watch_directory(loop):
+def watch_directory():
     """Watch directory by recursing into it every EVERY_SECONDS_WATCH.
 
     Compare size and mtimes between periods. Is responsible for converting on startup.
-
-    :param loop: AsyncIO event loop object.
     """
     log = logging.getLogger(__name__)
     previous_hash = None
@@ -53,7 +48,7 @@ def watch_directory(loop):
         array.clear()
         if current_hash != previous_hash:
             log.debug('watch_directory() file system changed, calling run().')
-            yield from run(loop)
+            yield from run()
             previous_hash = current_hash
         else:
             log.debug('watch_directory() no change in file system, not calling run().')

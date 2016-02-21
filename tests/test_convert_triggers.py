@@ -93,7 +93,7 @@ def test_periodically_convert(monkeypatch, tmpdir, caplog):
 
     loop.run_until_complete(asyncio.wait([
         shutdown_after_string(loop, caplog, 'periodically_convert() waking up.'),
-        periodically_convert(loop),
+        periodically_convert(),
     ], timeout=30))
 
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
@@ -120,7 +120,7 @@ def test_watch_directory(monkeypatch, tmpdir, caplog):
 
     nested_results = loop.run_until_complete(asyncio.wait([
         alter_file_system(loop, caplog, tmpdir),
-        watch_directory(loop),
+        watch_directory(),
     ], timeout=30))
 
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]

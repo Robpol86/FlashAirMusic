@@ -53,10 +53,9 @@ def timeout_signals_generator():
 
 
 @asyncio.coroutine
-def convert_file(loop, song):
+def convert_file(song):
     """Convert one file to mp3. Store metadata in ID3 comment tag.
 
-    :param loop: AsyncIO event loop object.
     :param flash_air_music.convert.discover.Song song: Song instance.
 
     :return: Same Song instance, command, and exit status of command.
@@ -81,6 +80,7 @@ def convert_file(loop, song):
 
     # Start process.
     log.info('Converting %s', song.name)
+    loop = asyncio.get_event_loop()
     transport, protocol = yield from loop.subprocess_exec(Protocol, *command, stdin=None)
     pid = transport.get_pid()
 
@@ -125,10 +125,9 @@ def convert_file(loop, song):
 
 
 @asyncio.coroutine
-def bottleneck(loop, conversion_semaphore, song):
+def bottleneck(conversion_semaphore, song):
     """Wait for conversion_semaphore before running convert_file().
 
-    :param loop: AsyncIO event loop object.
     :param asyncio.Semaphore conversion_semaphore: Semaphore() instance.
     :param flash_air_music.convert.discover.Song song: Song instance.
 
@@ -140,16 +139,15 @@ def bottleneck(loop, conversion_semaphore, song):
     try:
         with (yield from conversion_semaphore):
             log.debug('%s: got conversion_semaphore lock.', song.name)
-            return (yield from convert_file(loop, song))
+            return (yield from convert_file(song))
     finally:
         log.debug('%s: released lock.', song.name)
 
 
 @asyncio.coroutine
-def convert_songs(loop, songs):
+def convert_songs(songs):
     """Convert all songs concurrently.
 
-    :param loop: AsyncIO event loop object.
     :param iter songs: List of Song instances.
     """
     log = logging.getLogger(__name__)
@@ -158,7 +156,7 @@ def convert_songs(loop, songs):
 
     # Execute all.
     log.info('Beginning to convert %d file(s) up to %d at a time.', len(songs), workers)
-    nested = yield from asyncio.wait([bottleneck(loop, conversion_semaphore, s) for s in songs])
+    nested = yield from asyncio.wait([bottleneck(conversion_semaphore, s) for s in songs])
     results = [t for s in nested for t in s]
     succeeded = [t for t in (r.result() for r in results if not r.exception()) if t[-1] == 0]
     log.info('Done converting %d file(s) (%d failed).', len(results), len(results) - len(succeeded))

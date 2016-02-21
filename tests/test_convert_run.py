@@ -98,7 +98,7 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
     loop = asyncio.get_event_loop()
 
     if mode == 'nothing':
-        loop.run_until_complete(run.convert_cleanup(loop, [], [], []))
+        loop.run_until_complete(run.convert_cleanup([], [], []))
         assert not [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
         return
 
@@ -117,7 +117,7 @@ def test_convert_cleanup(monkeypatch, tmpdir, caplog, mode):
 
     # Run.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run.convert_cleanup(loop, songs, delete_files, remove_dirs))
+    loop.run_until_complete(run.convert_cleanup(songs, delete_files, remove_dirs))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
     # Verify.
@@ -160,14 +160,14 @@ def test_run(monkeypatch, tmpdir, mode):
     monkeypatch.setattr(transcode, 'GLOBAL_MUTABLE_CONFIG', config)
 
     if mode == 'nothing':
-        loop.run_until_complete(run.run(loop))
+        loop.run_until_complete(run.run())
         assert not semaphore.locked()
         assert not tmpdir.join('song.mp3').check()
         return
 
     HERE.join('1khz_sine_2.mp3').copy(source_file)
     assert not tmpdir.join('song.mp3').check()
-    loop.run_until_complete(run.run(loop))
+    loop.run_until_complete(run.run())
     assert not semaphore.locked()
     assert tmpdir.join('song.mp3').check(file=True)
 
@@ -212,7 +212,7 @@ def test_run_cancel(monkeypatch, tmpdir, caplog, signum):
 
     loop.run_until_complete(asyncio.wait([
         shutdown_after_start(loop, caplog, signum),
-        run.run(loop),
+        run.run(),
     ], timeout=30))
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
 
