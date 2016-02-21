@@ -11,6 +11,7 @@ Requires(pre):      shadow-utils
 Requires(preun):    systemd
 Requires:           ffmpeg
 Requires:           opencv-core
+Requires:           python3-aiohttp
 Requires:           python3-docopt
 Requires:           python3-requests
 Source0:            %{name}-%{version}.tar.gz

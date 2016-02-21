@@ -34,7 +34,7 @@ setup(
     entry_points={'console_scripts': ['FlashAirMusic = flash_air_music.__main__:entry_point']},
     extras_require=dict(no_rpm=['docoptcfg==1.0.1', 'mutagen==1.31']),
     include_package_data=True,
-    install_requires=['docopt==0.6.1', 'requests==2.9.1'],
+    install_requires=['aiohttp==0.19', 'docopt==0.6.1', 'requests==2.9.1'],
     keywords='FlashAir flac music mp3 WiFi',
     license='MIT',
     long_description=readme(),
