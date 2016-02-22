@@ -1,11 +1,11 @@
 """Test functions in module."""
 
 import io
+import socket
 import urllib.parse
 
 import httpretty
 import pytest
-import requests
 
 from flash_air_music import exceptions
 from flash_air_music.upload import api
@@ -13,53 +13,69 @@ from tests import HERE
 
 
 @pytest.mark.httpretty
+@pytest.mark.parametrize('mode', ['GET', 'POST'])
+def test_http_get_post(caplog, mode):
+    """Test http_get_post() with no problems.
+
+    :param caplog: pytest extension fixture.
+    :param str mode: Scenario to test for.
+    """
+    url = 'http://flashair/test'
+
+    # Setup response.
+    httpretty.register_uri(httpretty.GET if mode == 'GET' else httpretty.POST, url, body='OK')
+
+    # Test.
+    if mode == 'GET':
+        actual = api.http_get_post(url)
+    else:
+        actual = api.http_get_post(url, io.StringIO('data'), 'data.txt')
+    assert actual.status_code == 200
+    assert actual.text == 'OK'
+
+    # Verify log.
+    messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
+    if mode == 'GET':
+        assert 'Querying url http://flashair/test' in messages
+    else:
+        assert 'POSTing to http://flashair/test with file name data.txt' in messages
+
+
 @pytest.mark.parametrize('verbose', [True, False])
-@pytest.mark.parametrize('mode', ['Timeout', 'ConnectionError', 'GET', 'POST'])
-def test_http_get_post(monkeypatch, caplog, mode, verbose):
-    """Test http_get_post().
+@pytest.mark.parametrize('mode', ['Timeout', 'ConnectionError'])
+def test_http_get_post_socket_errors(monkeypatch, request, caplog, mode, verbose):
+    """Test http_get_post() with socket errors.
+
+    HTTPretty gave me trouble: https://github.com/gabrielfalcao/HTTPretty/issues/65
 
     :param monkeypatch: pytest fixture.
+    :param request: pytest fixture.
     :param caplog: pytest extension fixture.
     :param str mode: Scenario to test for.
     :param bool verbose: Test verbose logging.
     """
-    url = 'http://flashair/test'
+    server = socket.socket()
+    server.bind(('127.0.0.1', 0))
+    server.listen(1)
+    host_port = '{}:{}'.format(*server.getsockname())
+    if mode == 'Timeout':
+        request.addfinalizer(lambda: server.close())
+    else:
+        server.close()  # Opened just to get unused port number.
+
+    url = 'http://{}/test'.format(host_port)
     monkeypatch.setattr(api, 'GLOBAL_MUTABLE_CONFIG', {'--verbose': verbose})
 
-    # Setup responses.
-    if mode == 'GET':
-        httpretty.register_uri(httpretty.GET, url, body='OK')
-    elif mode == 'POST':
-        httpretty.register_uri(httpretty.POST, url, status=200)
-    else:
-        def func(*args, **kwargs):
-            """Raise exception."""
-            assert args
-            assert kwargs
-            if mode == 'Timeout':
-                raise requests.Timeout('Connection timed out.')
-            raise requests.ConnectionError('Connection error.')
-        monkeypatch.setattr('requests.get', func)
-
-    # Test good.
-    if mode == 'POST':
-        actual = api.http_get_post(url, io.StringIO('data'), 'data.txt')
-        assert actual.status_code == 200
-        return
-    if mode == 'GET':
-        actual = api.http_get_post(url)
-        assert actual.status_code == 200
-        assert actual.text == 'OK'
-        return
-
-    # Test exceptions.
+    # Test.
     with pytest.raises(exceptions.FlashAirNetworkError) as exc:
         api.http_get_post(url)
-    messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
     if mode == 'Timeout':
-        assert exc.value.args[0] == 'Timed out reaching flashair'
+        assert exc.value.args[0] == 'Timed out reaching {}'.format(host_port)
     else:
-        assert exc.value.args[0] == 'Unable to connect to flashair'
+        assert exc.value.args[0] == 'Unable to connect to {}'.format(host_port)
+
+    # Verify log.
+    messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
     if verbose:
         assert 'Handled exception:' in messages
     else:
