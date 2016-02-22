@@ -15,8 +15,8 @@ from tests import HERE
 @pytest.mark.httpretty
 @pytest.mark.parametrize('verbose', [True, False])
 @pytest.mark.parametrize('mode', ['Timeout', 'ConnectionError', 'GET', 'POST'])
-def test_requests_get_post(monkeypatch, caplog, mode, verbose):
-    """Test requests_get_post().
+def test_http_get_post(monkeypatch, caplog, mode, verbose):
+    """Test http_get_post().
 
     :param monkeypatch: pytest fixture.
     :param caplog: pytest extension fixture.
@@ -43,18 +43,18 @@ def test_requests_get_post(monkeypatch, caplog, mode, verbose):
 
     # Test good.
     if mode == 'POST':
-        actual = api.requests_get_post(url, io.StringIO('data'), 'data.txt')
+        actual = api.http_get_post(url, io.StringIO('data'), 'data.txt')
         assert actual.status_code == 200
         return
     if mode == 'GET':
-        actual = api.requests_get_post(url)
+        actual = api.http_get_post(url)
         assert actual.status_code == 200
         assert actual.text == 'OK'
         return
 
     # Test exceptions.
     with pytest.raises(exceptions.FlashAirNetworkError) as exc:
-        api.requests_get_post(url)
+        api.http_get_post(url)
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
     if mode == 'Timeout':
         assert exc.value.args[0] == 'Timed out reaching flashair'
