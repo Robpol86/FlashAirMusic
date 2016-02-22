@@ -1,5 +1,6 @@
 """Test functions in module."""
 
+import asyncio
 import io
 import socket
 import urllib.parse
@@ -27,9 +28,9 @@ def test_http_get_post(caplog, mode):
 
     # Test.
     if mode == 'GET':
-        actual = api.http_get_post(url)
+        actual = asyncio.get_event_loop().run_until_complete(api.http_get_post(url))
     else:
-        actual = api.http_get_post(url, io.StringIO('data'), 'data.txt')
+        actual = asyncio.get_event_loop().run_until_complete(api.http_get_post(url, io.StringIO('data'), 'data.txt'))
     assert actual[0] == 200
     assert actual[1] == 'OK'
 
@@ -68,7 +69,7 @@ def test_http_get_post_socket_errors(monkeypatch, request, caplog, mode, verbose
 
     # Test.
     with pytest.raises(exceptions.FlashAirNetworkError) as exc:
-        api.http_get_post(url)
+        asyncio.get_event_loop().run_until_complete(api.http_get_post(url))
     if mode == 'Timeout':
         assert exc.value.args[0] == 'Timed out reaching {}'.format(host_port)
     else:

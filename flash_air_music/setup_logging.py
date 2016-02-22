@@ -91,7 +91,7 @@ def setup_logging(config, name=None):
             formatter = formatter_verbose
         else:
             formatter = formatter_minimal
-            logging.getLogger('requests').setLevel(logging.WARNING)
+            # logging.getLogger('requests').setLevel(logging.WARNING)  # TODO remove
         handler_stdout = logging.StreamHandler(sys.stdout)
         handler_stdout.setFormatter(formatter)
         handler_stdout.setLevel(logging.DEBUG)

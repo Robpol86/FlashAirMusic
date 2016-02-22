@@ -8,54 +8,12 @@ import logging
 import urllib.parse
 
 import aiohttp
-import requests
 
 from flash_air_music import exceptions
 from flash_air_music.configuration import GLOBAL_MUTABLE_CONFIG
 
 
 @asyncio.coroutine
-def aiohttp_interface(client, url, stream=None, file_name=None):
-    """Use aiohttp to issue HTTP requests to a server.
-
-    :raise TODO
-
-    :param aiohttp.ClientSession client: aiohttp Client session instance.
-    :param str url: URL to query.
-    :param file stream: Data to POST/upload. If None then this will do a GET request.
-    :param str file_name: Remote file name (not path) to upload as.
-
-    :return: TODO
-    """
-    log = logging.getLogger(__name__)
-
-    if stream is None:
-        log.debug('Querying url %s', url)
-        response = yield from client.get(url)
-        text = yield from response.read_and_close()
-        status = response.status
-        yield from response.release()
-        return status, text
-
-
-@asyncio.coroutine
-def aiohttp_get_post(url, stream=None, file_name=None):
-    """TODO
-
-    :param url:
-    :param stream:
-    :param file_name:
-    :return:
-    """
-    log = logging.getLogger(__name__)
-
-    try:
-        with aiohttp.Timeout(5), aiohttp.ClientSession() as client:
-            status, text = yield from aiohttp_interface(client, url, stream, file_name)
-    except Exception:
-        raise
-
-
 def http_get_post(url, stream=None, file_name=None):
     """Perform a GET or POST request.
 
@@ -71,26 +29,32 @@ def http_get_post(url, stream=None, file_name=None):
     log = logging.getLogger(__name__)
 
     try:
-        if stream is None:
-            log.debug('Querying url %s', url)
-            response = requests.get(url, timeout=5)
-        else:
-            log.debug('POSTing to %s with file name %s', url, file_name)
-            response = requests.post(url, files={'file': (file_name, stream)}, timeout=5)
-    except requests.Timeout:
+        with aiohttp.Timeout(5), aiohttp.ClientSession() as client:
+            if stream is None:
+                log.debug('Querying url %s', url)
+                response = yield from client.get(url)
+            else:
+                log.debug('POSTing to %s with file name %s', url, file_name)
+                response = yield from client.post(url, data=aiohttp.FormData(fields=(file_name, stream)))
+            status = response.status
+            text = yield from response.text
+            yield from response.release()
+            yield from response.close()
+    except asyncio.TimeoutError:
         if GLOBAL_MUTABLE_CONFIG['--verbose']:
             log.exception('Handled exception:')
         raise exceptions.FlashAirNetworkError('Timed out reaching {}'.format(urllib.parse.urlsplit(url).netloc))
-    except requests.ConnectionError:
+    except aiohttp.ClientConnectionError:
         if GLOBAL_MUTABLE_CONFIG['--verbose']:
             log.exception('Handled exception:')
         raise exceptions.FlashAirNetworkError('Unable to connect to {}'.format(urllib.parse.urlsplit(url).netloc))
 
-    log.debug('Response code: %d', response.status_code)
-    log.debug('Response text: %s', response.text)
-    return response.status_code, response.text
+    log.debug('Response code: %d', status)
+    log.debug('Response text: %s', text)
+    return status, text
 
 
+@asyncio.coroutine
 def command_get_file_list(ip_addr, directory):
     """command.cgi?op=100: Get list of files in a directory. Not recursive.
 
@@ -109,7 +73,7 @@ def command_get_file_list(ip_addr, directory):
     url = 'http://{}/command.cgi?op=100&DIR={}'.format(ip_addr, urllib.parse.quote(directory))
 
     # Hit API.
-    status_code, text = http_get_post(url)
+    status_code, text = yield from http_get_post(url)
     if status_code == 404:
         raise exceptions.FlashAirDirNotFoundError(directory, status_code, text)
     if status_code != 200:
@@ -123,6 +87,7 @@ def command_get_file_list(ip_addr, directory):
     return text
 
 
+@asyncio.coroutine
 def command_get_time_zone(ip_addr):
     """command.cgi?op=221: get card's time zone.
 
@@ -138,7 +103,7 @@ def command_get_time_zone(ip_addr):
     url = 'http://{}/command.cgi?op=221'.format(ip_addr)
 
     # Hit API.
-    status_code, text = http_get_post(url)
+    status_code, text = yield from http_get_post(url)
     if status_code != 200:
         raise exceptions.FlashAirHTTPError(status_code, status_code, text)
 
@@ -149,6 +114,7 @@ def command_get_time_zone(ip_addr):
         raise exceptions.FlashAirBadResponse(text, status_code, text)
 
 
+@asyncio.coroutine
 def lua_script_execute(ip_addr, script_path, argv):
     """Execute Lua script over HTTP.
 
@@ -163,12 +129,13 @@ def lua_script_execute(ip_addr, script_path, argv):
     :rtype: str
     """
     url = 'http://{}/{}?{}'.format(ip_addr, script_path.strip('/'), urllib.parse.quote(argv))
-    status_code, text = http_get_post(url)
+    status_code, text = yield from http_get_post(url)
     if status_code != 200:
         raise exceptions.FlashAirHTTPError(status_code, status_code, text)
     return text
 
 
+@asyncio.coroutine
 def upload_delete(ip_addr, path):
     """upload.cgi?DEL={}: delete a file or directory.
 
@@ -181,11 +148,12 @@ def upload_delete(ip_addr, path):
     :param str path: Remote path to delete.
     """
     url = 'http://{}/upload.cgi?DEL={}'.format(ip_addr, path)
-    status_code, text = http_get_post(url)
+    status_code, text = yield from http_get_post(url)
     if status_code != 200:
         raise exceptions.FlashAirHTTPError(status_code, status_code, text)
 
 
+@asyncio.coroutine
 def upload_ftime_updir_writeprotect(ip_addr, directory, ftime):
     """upload.cgi?FTIME={}&UPDIR={}&WRITEPROTECT=ON: prepare for upload.
 
@@ -204,11 +172,12 @@ def upload_ftime_updir_writeprotect(ip_addr, directory, ftime):
     :param str ftime: Current FILETIME as a 32bit hex number.
     """
     url = 'http://{}/upload.cgi?FTIME={}&UPDIR={}&WRITEPROTECT=ON'.format(ip_addr, ftime, directory)
-    status_code, text = http_get_post(url)
+    status_code, text = yield from http_get_post(url)
     if status_code != 200:
         raise exceptions.FlashAirHTTPError(status_code, status_code, text)
 
 
+@asyncio.coroutine
 def upload_upload_file(ip_addr, file_name, handle):
     """upload.cgi: Upload a file to the card over WiFi.
 
@@ -222,6 +191,6 @@ def upload_upload_file(ip_addr, file_name, handle):
     :param handle: Opened file handle (binary mode) to stream from.
     """
     url = 'http://{}/upload.cgi'.format(ip_addr)
-    status_code, text = http_get_post(url, handle, file_name)
+    status_code, text = yield from http_get_post(url, handle, file_name)
     if status_code != 200:
         raise exceptions.FlashAirHTTPError(status_code, status_code, text)
