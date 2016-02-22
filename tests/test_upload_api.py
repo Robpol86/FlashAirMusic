@@ -30,8 +30,8 @@ def test_http_get_post(caplog, mode):
         actual = api.http_get_post(url)
     else:
         actual = api.http_get_post(url, io.StringIO('data'), 'data.txt')
-    assert actual.status_code == 200
-    assert actual.text == 'OK'
+    assert actual[0] == 200
+    assert actual[1] == 'OK'
 
     # Verify log.
     messages = [r.message for r in caplog.records if r.name.startswith('flash_air_music')]
